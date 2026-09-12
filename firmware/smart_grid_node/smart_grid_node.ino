@@ -245,9 +245,9 @@ void setup() {
   pinMode(PIN_LED_RED, OUTPUT);
   pinMode(PIN_BUZZER, OUTPUT);
   
-  // Startup test chirp: 2400 Hz resonant frequency tone on boot
-  tone(PIN_BUZZER, 2400, 150);
-  delay(180);
+  // Startup test chirp: Calibrated 2200 Hz tone on boot
+  tone(PIN_BUZZER, 2200, 100);
+  delay(130);
   noTone(PIN_BUZZER);
   digitalWrite(PIN_BUZZER, LOW);
 
@@ -341,12 +341,12 @@ void loop() {
   // 4. Fail-Safe Offline Keepalive Check
   // When backend heartbeat is not received, updateOledDisplay() manages autonomous local status.
 
-  // 5. Critical Alert Buzzer: Resonant 2400 Hz dual-chirp alarm pattern
+  // 5. Critical Alert Buzzer: Softened 2200 Hz dual-chirp alarm pattern (-10% volume)
   if (aiStatus == 2 || cachedFaultBtn == HIGH) {
     unsigned long buzzerCycle = currentMillis % 1000;
-    // Dual-chirp pattern: 0-100ms BEEP, 100-180ms SILENCE, 180-280ms BEEP, 280-1000ms SILENCE
-    if ((buzzerCycle < 100) || (buzzerCycle >= 180 && buzzerCycle < 280)) {
-      tone(PIN_BUZZER, 2400); // 2400 Hz hits the mechanical resonant peak for full volume
+    // Dual-chirp pattern: 0-75ms BEEP, 75-150ms SILENCE, 150-225ms BEEP, 225-1000ms SILENCE
+    if ((buzzerCycle < 75) || (buzzerCycle >= 150 && buzzerCycle < 225)) {
+      tone(PIN_BUZZER, 2200); // 2200 Hz softens acoustic volume by ~10% vs 2400 Hz peak
     } else {
       noTone(PIN_BUZZER);
       digitalWrite(PIN_BUZZER, LOW);
