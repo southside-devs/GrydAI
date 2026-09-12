@@ -1,4 +1,4 @@
-# 1. BACKEND & MACHINE LEARNING (Python 3.10+)
+# GrydAI - Core Python Requirements
 fastapi>=0.110.0
 uvicorn[standard]>=0.28.0
 websockets>=12.0
@@ -7,19 +7,3 @@ scikit-learn>=1.4.0
 numpy>=1.26.0
 pandas>=2.2.0
 pydantic>=2.6.0
-
-# 2. FRONTEND (Vite + React)
-vite>=5.2.0
-@vitejs/plugin-react>=4.2.0
-react>=18.3.0
-react-dom>=18.3.0
-maplibre-gl>=4.0.0
-recharts>=2.12.0
-lucide-react>=0.350.0
-clsx>=2.1.0
-tailwind-merge>=2.2.0
-tailwindcss>=3.4.0
-postcss>=8.4.0
-autoprefixer>=10.4.0
-
-# 3. FIRMWARE & EMBEDDED (ESP32 / PlatformIO / Arduino)

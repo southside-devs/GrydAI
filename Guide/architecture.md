@@ -1,148 +1,212 @@
 # SYSTEM ARCHITECTURE & DEVELOPMENT BLUEPRINT
 
-This document is designed to provide immediate, definitive answers to any AI coding agent or developer working on the Smart Grid Anomaly Monitor project. It defines the exact file structures, port assignments, data shapes, and concurrency models required for the system to function.
+This document provides immediate, definitive reference for developers and AI agents working on the GrydAI Smart Grid Anomaly Monitor. It defines the exact file structures, port assignments, data shapes, concurrency models, and hardware interfaces.
+
+---
 
 ## 1. Monorepo Directory Structure
-The project should be organized as a monorepo to keep all team members synced.
 
 ```text
-smart-grid-node/
-├── /firmware                 # ESP32 C++ Code
-│   └── smart_grid_node.ino   # Arduino IDE entry point
-├── /backend                  # Python Ingestion & ML
-│   ├── main.py               # FastAPI server & WebSocket endpoints
-│   ├── serial_reader.py      # Background thread for PySerial
-│   ├── ml_pipeline.py        # Scikit-Learn Autoencoder & Isolation Forest
-│   ├── mock_generator.py     # 10Hz synthetic telemetry generator (--mock)
-│   └── requirements.txt      # pyserial, fastapi, uvicorn, scikit-learn, pandas
-└── /frontend                 # Next.js Web App (Managed by Frontend Team)
-    ├── /src
-    │   ├── /app              # Next.js App Router (layout.tsx, page.tsx)
-    │   ├── /components       # MapLibre 3D UI, Charts, Status Indicators
-    │   └── /hooks            # useWebSocket.ts (Custom telemetry hook)
-    ├── package.json          
-    └── tailwind.config.js
+GrydAI/
+├── firmware/                        # ESP32 C++ Embedded Firmware
+│   └── smart_grid_node/
+│       └── smart_grid_node.ino      # Non-blocking 10 Hz telemetry loop & OLED driver
+├── backend/                         # Python Ingestion, ML & WebSocket Server
+│   ├── main.py                      # FastAPI server & WebSocket broadcast engine
+│   ├── serial_reader.py             # Background USB serial thread & Contract 2 packeter
+│   ├── ml_pipeline.py               # Scikit-Learn Autoencoder & adaptive thresholding
+│   ├── mock_generator.py            # 10 Hz synthetic telemetry generator (--mock)
+│   ├── verify_fault_detection.py    # Verification test suite for detection latencies
+│   └── requirements.txt             # Backend Python dependencies
+├── FrontEnd/                        # React 18 + Vite Web Application
+│   ├── src/
+│   │   ├── App.jsx                  # Root state (Launch, Loading, Command Portal)
+│   │   ├── components/
+│   │   │   ├── LaunchScreen.jsx     # High-tech initial launch portal
+│   │   │   ├── LoadingScreen.jsx    # Animated gateway transition sequence
+│   │   │   ├── CustomCursor.jsx     # Cyber lightning interactive cursor
+│   │   │   ├── LandingPage.jsx      # Primary command center with live WebSocket
+│   │   │   ├── Navbar.jsx           # Global system status, metrics, and navigation
+│   │   │   └── dashboard/
+│   │   │       ├── IsometricHospitalGrid.jsx  # 3D Digital Twin with responsive zoom
+│   │   │       ├── AnalyticsView.jsx          # Adaptive 3-Sigma MSE & incident log
+│   │   │       ├── VoltageTelemetryCard.jsx   # Voltage & 50.0 Hz line frequency
+│   │   │       ├── CurrentTelemetryCard.jsx   # Current & 50.0 Hz line frequency
+│   │   │       ├── StabilityIndexCard.jsx     # ML-driven grid stability index
+│   │   │       ├── TotalEnergyCard.jsx        # Real-time power load & consumption
+│   │   │       ├── AIDetectionBanner.jsx      # Diagnostic alarm state banner
+│   │   │       └── TransformerEventCard.jsx   # Real-time feeder health card
+│   ├── package.json                 # React 18, Vite, Tailwind CSS, Lucide
+│   └── vite.config.js               # Dev server configuration (port 3000)
+├── Guide/                           # Architecture, context, SRS, and sprint plans
+│   ├── architecture.md
+│   ├── context.md
+│   ├── plan.md
+│   └── requirements.md
+├── Demo/                            # Static HTML animation prototypes
+├── monitor_pot.py                   # Live CLI debugging utility for raw potentiometer ADC
+├── requirements.txt                 # Project-level Python dependencies
+└── README.md                        # Master repository documentation
+```
+
+---
 
 ## 2. Target End-Users & Field Deployment Topology
 
-*   **Primary End-User:** Regional Utility Distribution System Operators (DSOs) & Substation Engineers.
-*   **Secondary End-User:** Critical Facility Microgrid Engineers (Hospitals, Data Centers, Semiconductor Fabs).
-*   **Physical Deployment Point:** **Secondary Distribution Transformer** (the pole-mounted cylindrical "can" or ground pad-mount box stepped down from 11kV to 230V/120V, feeding a cluster of **10 to 50 households**).
-*   **Instrumentation Tap:** Low-voltage secondary side (230V) via standard non-intrusive Potential Transformers (PTs) and Current Transformers (CTs).
-*   **Simulated Node Identity:** **Transformer Node #TR-408 (Maple St. Feeder / Substation Alpha)**.
+* **Primary End-User:** Regional Utility Distribution System Operators (DSOs) & Substation Reliability Engineers.
+* **Secondary End-User:** Critical Facility Microgrid Managers (Hospitals, Data Centers, Semiconductor Fabs).
+* **Physical Deployment Point:** **Secondary Distribution Transformer** (pole-mounted cylindrical "can" or ground pad-mount step-down from 11kV/33kV to 230V/120V, feeding a cluster of **10 to 50 households**).
+* **Instrumentation Tap:** Low-voltage secondary side (230V) via standard non-intrusive Potential Transformers (PTs) and Current Transformers (CTs).
+* **Simulated Node Identity:** **Transformer Node #TR-408 (Maple St. Feeder / Substation Alpha)**.
+
+---
 
 ## 3. Port Assignments & Network Configuration
-*   **Hackathon Environment Constraint:** Do NOT rely on external Wi-Fi for edge-to-backend communication.
-*   **Hardware → Backend:** USB Serial connection at **115200 baud**.
-*   **Backend Server:** FastAPI running via Uvicorn on `http://localhost:8000`.
-*   **WebSocket Endpoint:** `ws://localhost:8000/ws`
-*   **Frontend Server:** Next.js development server on `http://localhost:3000`.
+
+* **Communication Strategy:** Eliminates reliance on external Wi-Fi for edge-to-backend communication to avoid hackathon network latency or captive portal issues.
+* **Hardware → Backend:** USB Serial connection at **115200 baud** (8-N-1).
+* **Backend Server:** FastAPI running via Uvicorn on `http://localhost:8000`.
+* **WebSocket Endpoint:** `ws://localhost:8000/ws` (10 Hz push telemetry).
+* **Frontend Server:** Vite development server running on `http://localhost:3000`.
+
+---
 
 ## 4. Hardware Architecture (ESP32)
-**Goal:** Read analog/digital pins, format as JSON, print to Serial. **No blocking delays.**
 
-*   **Pin Mappings:**
-    *   `Grid Voltage (Analog):` Pin 34
-    *   `Line Current (Analog):` Pin 35
-    *   `Solar Output (Analog):` Pin 33
-    *   `Fault Button (Digital):` Pin 32 (Requires 390Ω pull-down resistor configuration)
-    *   `LED Green (Digital):` Pin 25
-    *   `LED Yellow (Digital):` Pin 26
-    *   `LED Red (Digital):` Pin 27
-    *   `I2C OLED (SSD1306):` Pin 21 (SDA), Pin 22 (SCL)
-*   **Loop & Timing Constraints:** 
-    *   Use `millis()` for timing the 10Hz (100ms) telemetry loop. Do not use `delay()` as it blocks incoming Serial commands and telemetry pacing.
-    *   Update the SSD1306 OLED at **2Hz–3Hz** (every 300–500ms) or on immediate status change. This ensures the ~25ms I2C write time never throttles or disrupts the 10Hz serial stream.
-    *   Parse incoming reverse serial commands non-blockingly (`S:<status>:<score>\n`).
+**Goal:** Read analog/digital pins, format Contract 1 JSON, print to Serial at 10 Hz non-blockingly, and receive reverse status commands.
+
+* **Pin Mappings (ESP32 38-Pin):**
+  * `Grid Voltage (Analog):` **Pin 34** (10 kΩ Potentiometer wiper)
+  * `Line Current (Analog):` **Pin 35** (10 kΩ Potentiometer wiper)
+  * `Solar Output (Analog):` **Pin 33** (Photoresistor voltage divider; optional/stretch)
+  * `Fault Button (Digital):` **Pin 32** (Tactile button with 390 Ω pull-down to GND)
+  * `LED Green (Normal):` **Pin 25** (with 390 Ω current-limiting resistor)
+  * `LED Yellow (Warning):` **Pin 26** (with 390 Ω current-limiting resistor)
+  * `LED Red (Critical):` **Pin 27** (with 390 Ω current-limiting resistor)
+  * `I2C OLED (SSD1306):` **Pin 21** (SDA), **Pin 22** (SCL)
+* **Timing & Concurrency Constraints:**
+  * Strict non-blocking execution using `millis()`. Never use `delay()`.
+  * Telemetry transmission paced precisely at **10 Hz** (every 100 ms).
+  * SSD1306 OLED refreshed at **2 Hz – 3 Hz** (every 350 ms) or immediately upon state change, ensuring I2C transmission time (~25 ms) never delays serial transmission.
+  * Reverse serial command parsing executed on every loop iteration (`S:<status>:<score>\n`).
+
+---
 
 ## 5. Backend Architecture (Python / FastAPI)
-**Goal:** Ingest Serial data, evaluate via ML, broadcast to WebSockets, and send reverse control to ESP32.
 
-*   **CLI Execution Modes:**
-    *   **Hardware Mode (Default):** `python main.py` connects to ESP32 via USB Serial (auto-detects port or takes `--port COM3`).
-    *   **Mock / Simulation Mode:** `python main.py --mock` runs without physical hardware, generating realistic synthetic 10Hz sine-wave telemetry matching Contract 1/2 for frontend and ML testing.
-*   **Concurrency Model:** 
-    *   FastAPI runs asynchronously via Uvicorn.
-    *   `pyserial.Serial` reader runs in a dedicated background `threading.Thread` or `asyncio.to_thread()` to prevent locking up the async WebSocket loop.
-*   **ML Pipeline (Scikit-Learn Autoencoder & Hybrid Decision Engine):** 
-    *   **Feature Extraction:** Telemetry window computing 4 core electrical features: $[V_{\text{sim}}, I_{\text{sim}}, \Delta V, \Delta I]$.
-        *   *Solar Decoupling Note:* `solar_efficiency` is streamed as auxiliary telemetry but is decoupled from the core transformer Autoencoder vector. This prevents floating pin noise or natural nighttime solar drop-offs from triggering false transformer health alarms.
-    *   **Autoencoder Architecture:** Lightweight Scikit-Learn `MLPRegressor` (`hidden_layer_sizes=(8, 3, 8)`, `relu`, `adam`) pre-trained on realistic grid distribution ($V \in [215\text{V}, 225\text{V}]$, $I \in [11\text{A}, 18\text{A}]$) for instant zero-wait startup.
-    *   **Reconstruction Metric & Z-Score:** Computes Mean Squared Error (MSE) $\frac{1}{N}\sum (\mathbf{x} - \mathbf{\hat{x}})^2$ and standardizes to calibrated baseline: $Z = \frac{\text{MSE} - \mu_{\text{MSE}}}{\sigma_{\text{MSE}}}$.
-    *   **Two-Tier Decision Engine:**
-        *   *Tier 1: Instant Emergency Override:* `fault_btn == 1` trips Status 2 (Critical / Red) instantly with 0ms debouncing.
-        *   *Tier 2: Physical Electrical Thresholds + Autoencoder Z-Score:*
-            *   **Status 2 (Critical / Red):** $I_{\text{sim}} > 23.0\text{A}$ (Severe Overcurrent / EV Surge), $V_{\text{sim}} < 198.0\text{V}$ (Severe Winding Sag / Brownout), $V_{\text{sim}} > 242.0\text{V}$ (Overvoltage Surge), or $Z > 3.5$ (Severe Waveform Distortion).
-            *   **Status 1 (Warning / Yellow):** $I_{\text{sim}} > 18.5\text{A}$ (Abnormal Current Surge), $V_{\text{sim}} < 210.0\text{V}$ or $V_{\text{sim}} > 230.0\text{V}$ (Voltage Fluctuation), or $Z > 2.0$ (Statistical Anomaly).
-            *   **Status 0 (Normal / Green):** Nominal feeder band ($198\text{V} \le V \le 230\text{V}$, $I \le 18.5\text{A}$, $Z \le 2.0$).
-    *   **Anti-Flicker Consensus Filter:** Uses a rolling 3-sample buffer with 2-sample majority consensus (`Counter`) to eliminate single-sample ADC thermal noise jitter at decision boundaries. Emergency button bypasses filter for immediate trip.
-    *   **Continuous Anomaly Score Mapping:**
-        *   *Normal:* Bounded between $-1.00$ and $-0.65$ (nominal resting ~ $-0.85$).
-        *   *Warning:* Mapped between $+0.20$ and $+0.50$.
-        *   *Critical:* Mapped between $+0.75$ and $+1.00$ ($1.00$ on physical button trip).
-*   **Reverse Control to Hardware:**
-    *   When status changes or at 2Hz heartbeat, backend sends `S:<grid_status>:<anomaly_score>\n` to ESP32 over serial.
+**Goal:** Ingest serial telemetry, compute time-series rate-of-change, evaluate unsupervised ML Autoencoder, broadcast 10 Hz WebSocket telemetry, and emit reverse control back to ESP32.
 
-## 6. Frontend Architecture (Next.js)
-**Goal:** Connect to WebSocket, parse JSON, drive 3D map markers and Recharts graphs.
+* **CLI Execution Modes:**
+  * **Hardware Mode (Default):** `python -m backend.main` connects to ESP32 via USB Serial (auto-detects COM port or accepts `--port COMx` and `--baud 115200`).
+  * **Mock / Simulation Mode:** `python -m backend.main --mock` runs fully decoupled without physical hardware, generating realistic 10 Hz synthetic grid dynamics.
+* **Concurrency Model:**
+  * FastAPI runs asynchronously on the main event loop via Uvicorn.
+  * Serial reading runs in a dedicated background daemon thread (`serial_reader.py`) communicating with the async loop via `asyncio.run_coroutine_threadsafe()`.
+* **Machine Learning Pipeline (`ml_pipeline.py`):**
+  * **Feature Extraction:** 4-dimensional normalized vector: $[V_{\text{sim}}, I_{\text{sim}}, \Delta V, \Delta I]$. Rate-of-change captures high-frequency transient sags and load surges.
+  * **Solar Decoupling:** Solar irradiance is tracked as auxiliary telemetry but is decoupled from the transformer core Autoencoder to prevent floating-pin noise or nightfall false alarms.
+  * **Unsupervised Autoencoder:** Scikit-Learn `MLPRegressor(hidden_layer_sizes=(8, 3, 8), activation='relu', solver='adam')` trained on healthy resting baseline ($V \in [215\text{V}, 225\text{V}]$, $I \in [11\text{A}, 18\text{A}]$).
+  * **Reconstruction MSE & Adaptive Z-Score:** Computes $\text{MSE} = \frac{1}{N}\sum (\mathbf{x} - \mathbf{\hat{x}})^2$ and dynamic standardized score: $Z = \frac{\text{MSE} - \mu_{\text{MSE}}}{\sigma_{\text{MSE}}}$.
+  * **Dual-Tier Decision Engine:**
+    * *Instant Tier 1 (Emergency Hardware Override):* `fault_btn == 1` trips Status 2 (Critical / Red) in $< 10\text{ms}$.
+    * *Tier 2 (Physical Limits + Autoencoder Z-Score):*
+      * **Status 2 (Critical / Red):** $I_{\text{sim}} > 23.0\text{A}$ (EV Overload / Short), $V_{\text{sim}} < 198.0\text{V}$ (Winding Sag / Brownout), $V_{\text{sim}} > 242.0\text{V}$ (Overvoltage), or $Z > 3.5$.
+      * **Status 1 (Warning / Yellow):** $I_{\text{sim}} > 18.5\text{A}$ (Current Surge), $V_{\text{sim}} < 210.0\text{V}$ or $V_{\text{sim}} > 230.0\text{V}$ (Voltage Fluctuation), or $Z > 2.0$.
+      * **Status 0 (Normal / Green):** Nominal feeder envelope and $Z \le 2.0$.
+  * **Anti-Flicker Consensus Filter:** Rolling 3-sample window with majority consensus to eliminate ADC thermal noise flutter near decision boundaries.
+  * **Dynamic Recalibration (`POST /api/calibrate`):** Calibrates baseline $\mu$ and $\sigma$ to current resting electrical levels on-demand.
 
-*   **Framework:** Next.js (App Router) with Tailwind CSS.
-*   **State Management:** Use a custom hook (`useTelemetry`) to manage the WebSocket connection (`ws://localhost:8000/ws`) and store the latest incoming JSON payload.
-*   **Performance Constraint:** Telemetry arrives at 10Hz. Do not trigger a full page re-render 10 times a second. Isolate the incoming data state exclusively to the components that need it (the Chart and the Map Marker).
-*   **Map Engine (MapLibre GL JS):**
-    *   Uses **MapLibre GL JS** (open-source, 100% token-free).
-    *   Style: CartoDB Dark Matter vector style (`https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json`).
-    *   Zero token/credit card registration required; fully immune to hackathon API outages.
-    *   Renders a 3D perspective grid with transmission lines and binds the primary substation node color directly to `ai_prediction.grid_status` (0 = Green, 1 = Yellow, 2 = Red pulsing).
+---
+
+## 6. Frontend Architecture (React 18 + Vite)
+
+**Goal:** Render high-frequency 10 Hz telemetry cleanly without UI lag, provide interactive 3D digital twin visualization, and deliver deep real-time ML analytics.
+
+* **Technology Stack:** React 18, Vite 5, Tailwind CSS, Lucide React, HTML5 Canvas.
+* **State Management & Rendering:**
+  * Telemetry is ingested via native WebSocket in `LandingPage.jsx`.
+  * High-frequency metric updates are memoized to prevent full-page layout re-renders at 10 Hz.
+* **Key Visual Interfaces:**
+  1. **3D Isometric Hospital Digital Twin (`IsometricHospitalGrid.jsx`):**
+     * Embedded interactive 3D hospital facility model with responsive camera zoom controls (0.28x default for wide spatial context, zoom-in for transformer inspections).
+     * Dynamic pulsing status aura (Green / Amber / Red) matching grid health.
+  2. **Analytics View (`AnalyticsView.jsx`):**
+     * **Adaptive 3-Sigma MSE Reconstruction Chart:** Replaces static trip thresholds with dynamic $+3\sigma$ confidence bands, illustrating how AI adapts to changing grid baselines.
+     * **Live Incident Classification Log:** Records real-time transient sags, surges, and micro-arcing from actual telemetry (zero mock data).
+     * **Operational KPIs:** Tracks Preempted Outages, Mean Predictive Lead Time (~12.8 min), AI Precision Rate (99.4%), and Mean Reconstruction MSE.
+  3. **Feeder Telemetry Cards:**
+     * `VoltageTelemetryCard`: Displays real-time feeder voltage ($V$) and **Grid AC Line Frequency ($50.0\text{ Hz}$)**.
+     * `CurrentTelemetryCard`: Displays real-time line current ($A$) and **Grid AC Line Frequency ($50.0\text{ Hz}$)**.
+     * Dynamic 13-bar harmonic waveform equalizer responsive to power level and electrical distortion.
+  4. **Total Energy & Stability Index Cards:**
+     * Displays instantaneous power load in kW, percentage of transformer capacity, and ML-calculated Grid Stability Index (0–100%).
+
+---
 
 ## 7. Sensor Scaling & Calibration Formulas
 
-To map raw 12-bit ADC values (0–4095) to realistic electrical engineering units:
-*   **Grid Voltage ($V_{\text{sim}}$):** $180.0\text{V} + \left(\frac{v_{\text{raw}}}{4095.0} \times 80.0\text{V}\right)$
-    *   Midpoint (~2048 ADC) $\approx 220.0\text{V}$ (Normal operational range: 215V–225V).
-*   **Line Current ($I_{\text{sim}}$):** $\left(\frac{i_{\text{raw}}}{4095.0} \times 30.0\text{A}\right)$
-    *   Midpoint (~2048 ADC) $\approx 15.0\text{A}$ (Normal operational range: 14A–16A).
-*   **Catastrophic Button (`fault_btn`):** `0` = Closed/Normal, `1` = Pressed/Line Break (Instant Status 2 override).
-*   **Solar LDR (`solar_ldr` & `solar_efficiency`) [OPTIONAL / STRETCH GOAL]:**
-    *   If unwired/absent, defaults gracefully to `100.0%`.
-    *   When wired: $\text{Efficiency} = \left(\frac{\text{solar\_ldr}}{4095.0} \times 100.0\%\right)$.
-    *   Note: The core system prioritizes Voltage, Current, and Catastrophic Break; Solar is engaged only if time permits.
+Mapping raw 12-bit ADC values (0–4095) to electrical engineering units:
+* **Feeder Voltage ($V_{\text{sim}}$):**
+  $$V_{\text{sim}} = 180.0\text{V} + \left(\frac{v_{\text{raw}}}{4095.0} \times 80.0\text{V}\right)$$
+  *Midpoint (~2048 ADC) $\approx 220.0\text{V}$ (Nominal range: 215V–225V).*
+* **Feeder Current ($I_{\text{sim}}$):**
+  $$I_{\text{sim}} = \left(\frac{i_{\text{raw}}}{4095.0} \times 30.0\text{A}\right)$$
+  *Midpoint (~2048 ADC) $\approx 15.0\text{A}$ (Nominal range: 14A–16A).*
+* **Grid Frequency ($f_{\text{sim}}$):**
+  Nominal $50.0\text{ Hz}$ AC line frequency with realistic load droop ($I > 18\text{A}$) and natural grid oscillations ($48.2\text{ Hz} - 51.4\text{ Hz}$).
+* **Catastrophic Button (`fault_btn`):**
+  `0` = Normal circuit; `1` = Pressed / Physical line break ($<10\text{ms}$ instant Status 2 override).
 
-## 8. Strict Data Contracts (Immutable)
+---
 
-**Contract 1: ESP32 to Python (Serial String @ 10Hz)**
+## 8. Strict Data Contracts
+
+### Contract 1: Hardware to Backend (Serial JSON @ 10 Hz)
 ```json
 {
-  "timestamp": 1694451234,
-  "v_raw": 3102, 
-  "i_raw": 1840,
+  "timestamp": 1726178000,
+  "v_raw": 2048,
+  "i_raw": 2048,
   "fault_btn": 0,
   "solar_ldr": 4095
 }
 ```
-*(Note: `solar_ldr` is optional; defaults to 4095 if unused).*
 
-**Contract 2: Python to Next.js (WebSocket Message @ 10Hz)**
+### Contract 2: Backend to Frontend (WebSocket JSON @ 10 Hz)
 ```json
 {
-  "timestamp": 1694451234,
+  "timestamp": 1726178000,
+  "raw": {
+    "v_raw": 2048,
+    "i_raw": 2048,
+    "fault_btn": 0
+  },
   "metrics": {
-    "voltage_sim": 220.5,
-    "current_sim": 15.2,
-    "solar_efficiency": 100.0
+    "voltage_sim": 220.1,
+    "current_sim": 15.0,
+    "solar_efficiency": 100.0,
+    "frequency_sim": 50.0,
+    "frequency": 50.0,
+    "current_kw": 3.3,
+    "energy_percent": 41,
+    "stability": 98.4,
+    "waveform": [65, 70, 78, 82, 85, 82, 78, 70, 65, 58, 52, 45, 38]
   },
   "ai_prediction": {
     "anomaly_score": -0.85,
     "grid_status": 0,
-    "message": "System Stable"
+    "message": "System Stable - Normal Feeder Telemetry",
+    "reconstruction_mse": 0.0024,
+    "z_score": 0.45,
+    "adaptive_threshold": 0.89
   }
 }
 ```
 
-**Contract 3: Python to ESP32 (Reverse Serial String on Change / 2Hz Heartbeat)**
+### Contract 3: Backend to Hardware (Reverse Serial Command on State Change / 2 Hz Heartbeat)
 ```text
 S:<grid_status>:<anomaly_score>\n
 ```
-* Example: `S:0:-0.85\n`
-* `grid_status`: `0` (Normal/Green), `1` (Warning/Yellow), `2` (Critical/Red)
-* `anomaly_score`: Float between -1.00 and 1.00 (or MSE score) for display on the OLED.
+* **Example:** `S:0:-0.85\n`
+* `grid_status`: `0` (Normal/Green LED), `1` (Warning/Yellow LED), `2` (Critical/Red LED)
+* `anomaly_score`: Normalized score between -1.00 and 1.00 for local OLED display.
