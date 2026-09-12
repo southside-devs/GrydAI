@@ -94,12 +94,14 @@ void setStatusLeds(int status) {
     digitalWrite(PIN_LED_GREEN, HIGH);
     digitalWrite(PIN_LED_YELLOW, LOW);
     digitalWrite(PIN_LED_RED, LOW);
+    noTone(PIN_BUZZER);
     digitalWrite(PIN_BUZZER, LOW);
   } else if (status == 1) {
     // Warning / Micro-Fluctuation
     digitalWrite(PIN_LED_GREEN, LOW);
     digitalWrite(PIN_LED_YELLOW, HIGH);
     digitalWrite(PIN_LED_RED, LOW);
+    noTone(PIN_BUZZER);
     digitalWrite(PIN_BUZZER, LOW);
   } else {
     // Critical / Fault / Line Break
@@ -243,9 +245,10 @@ void setup() {
   pinMode(PIN_LED_RED, OUTPUT);
   pinMode(PIN_BUZZER, OUTPUT);
   
-  // Startup test chirp: Quick 100ms chirp on boot to verify buzzer wiring & acoustic level
-  digitalWrite(PIN_BUZZER, HIGH);
-  delay(100);
+  // Startup test chirp: 2048 Hz tone on boot to verify buzzer wiring & frequency response
+  tone(PIN_BUZZER, 2048, 100);
+  delay(120);
+  noTone(PIN_BUZZER);
   digitalWrite(PIN_BUZZER, LOW);
 
   // Initial State: Green Active
@@ -338,15 +341,17 @@ void loop() {
   // 4. Fail-Safe Offline Keepalive Check
   // When backend heartbeat is not received, updateOledDisplay() manages autonomous local status.
 
-  // 5. Critical Alert Buzzer (Soft 80ms non-blocking pulse every 1000ms)
+  // 5. Critical Alert Buzzer (Soft 80ms non-blocking tone pulse every 1000ms)
   if (aiStatus == 2 || cachedFaultBtn == HIGH) {
     unsigned long buzzerCycle = currentMillis % 1000;
     if (buzzerCycle < 80) {
-      digitalWrite(PIN_BUZZER, HIGH);
+      tone(PIN_BUZZER, 2048);
     } else {
+      noTone(PIN_BUZZER);
       digitalWrite(PIN_BUZZER, LOW);
     }
   } else {
+    noTone(PIN_BUZZER);
     digitalWrite(PIN_BUZZER, LOW);
   }
 }
