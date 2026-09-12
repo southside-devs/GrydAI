@@ -172,15 +172,13 @@ class GridAnomalyDetector:
                 message = "CRITICAL: Severe Transformer Winding Sag"
             else:
                 message = "CRITICAL: High Voltage Surge & Distortion"
-        elif z_score > 2.0 or i_sim > 18.5 or v_sim < 210.0 or v_sim > 230.0 or solar_sim < 50.0:
+        elif z_score > 2.0 or i_sim > 18.5 or v_sim < 210.0 or v_sim > 230.0:
             grid_status = 1
             norm_score = max(0.20, norm_score)
             if i_sim > 18.5:
                 message = "Warning: Abnormal Current Surge Detected"
             elif v_sim < 210.0 or v_sim > 230.0:
                 message = "Warning: Voltage Sag & Waveform Distortion"
-            elif solar_sim < 50.0:
-                message = "Warning: Solar Generation Drop-off"
             else:
                 message = "Warning: Micro-Fluctuation Detected"
         else:
