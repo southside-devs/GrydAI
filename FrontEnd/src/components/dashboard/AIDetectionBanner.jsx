@@ -9,7 +9,7 @@ export default function AIDetectionBanner({
 }) {
   return (
     <div
-      className="rounded-2xl p-5 w-60 shadow-2xl transition-all duration-500 backdrop-blur-md relative overflow-hidden bg-[#facc15] text-[#0f172a] shadow-[0_12px_40px_rgba(250,204,21,0.35)]"
+      className="rounded-2xl p-5 w-60 relative overflow-hidden bg-[#ffe600] text-[#0f172a] border border-[#ffe600]"
     >
       <div className="flex items-center justify-between mb-3.5">
         <div className="w-9 h-9 rounded-full bg-black/10 flex items-center justify-center">

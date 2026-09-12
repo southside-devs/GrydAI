@@ -3,7 +3,7 @@ import { ArrowUpRight, Wallet, Leaf } from 'lucide-react';
 
 export default function ImpactCard({ earning = 0.00, co2SavedKm = '0', co2OffsetMt = '0.0' }) {
   return (
-    <div className="flex-1 bg-[#0b0e14]/90 border border-white/[0.08] rounded-2xl p-5 flex flex-col justify-between backdrop-blur-md relative overflow-hidden group hover:border-[#ffe600]/30 transition-all duration-300">
+    <div className="flex-1 bg-[#0b0e14] border border-white/[0.08] rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden group hover:border-[#ffe600]/30 transition-all duration-300">
       <div className="border-b border-white/[0.06] pb-3.5">
         <div className="flex items-center justify-between mb-2.5">
           <span className="text-base font-semibold text-[#94a3b8] tracking-wide">

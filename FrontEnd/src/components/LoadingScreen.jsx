@@ -95,7 +95,6 @@ export default function LoadingScreen({ onComplete }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            filter: 'drop-shadow(0 0 35px rgba(255, 230, 0, 0.5)) drop-shadow(0 0 80px rgba(255, 230, 0, 0.2))',
           }}
         >
           <img
@@ -117,7 +116,6 @@ export default function LoadingScreen({ onComplete }) {
             letterSpacing: '0.35em',
             color: 'rgba(255, 230, 0, 0.9)',
             marginTop: '6px',
-            textShadow: '0 0 20px rgba(255, 230, 0, 0.4)',
           }}
         >
           AI LAYER FOR PREDICTIVE GRID MANAGEMENT
@@ -154,7 +152,6 @@ export default function LoadingScreen({ onComplete }) {
               width: `${progress}%`,
               height: '100%',
               backgroundColor: '#ffe600',
-              boxShadow: '0 0 8px #ffe600',
               transition: 'width 0.4s ease',
             }}
           />

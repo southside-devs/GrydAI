@@ -65,10 +65,7 @@ export default function GridCanvas() {
           ctx.beginPath();
           ctx.arc(sparkX, y, 2.5, 0, Math.PI * 2);
           ctx.fillStyle = '#ffe600';
-          ctx.shadowColor = '#ffe600';
-          ctx.shadowBlur = 10;
           ctx.fill();
-          ctx.shadowBlur = 0; // reset
         }
       }
 

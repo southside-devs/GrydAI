@@ -10,7 +10,7 @@ export default function TelemetryCard({ telemetry = {} }) {
   } = telemetry;
 
   return (
-    <div className="flex-1 bg-[#0b0e14]/90 border border-white/[0.08] rounded-2xl p-5 flex flex-col justify-between backdrop-blur-md relative overflow-hidden group hover:border-[#ffe600]/30 transition-all duration-300">
+    <div className="flex-1 bg-[#0b0e14] border border-white/[0.08] rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden group hover:border-[#ffe600]/30 transition-all duration-300">
       <div className="flex items-center justify-between mb-3.5">
         <span className="text-base font-semibold text-[#94a3b8] tracking-wide">
           Incoming Feeder Telemetry
@@ -43,15 +43,15 @@ export default function TelemetryCard({ telemetry = {} }) {
 
       <div className="flex items-center gap-3.5 text-xs font-mono tracking-wider text-[#94a3b8] uppercase mb-4">
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b] shadow-[0_0_6px_#f59e0b]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]" />
           <span>VOLTAGE</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#f97316] shadow-[0_0_6px_#f97316]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#f97316]" />
           <span>CURRENT</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#3b82f6] shadow-[0_0_6px_#3b82f6]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#3b82f6]" />
           <span>FREQUENCY</span>
         </div>
       </div>
@@ -68,7 +68,6 @@ export default function TelemetryCard({ telemetry = {} }) {
                 height: `${heightPercent}%`,
                 backgroundColor: val === 0 ? '#1e293b' : isHighlight ? '#ffe600' : idx > 8 ? '#f59e0b' : '#334155',
                 opacity: val === 0 ? 0.4 : 0.85,
-                boxShadow: isHighlight ? '0 0 8px rgba(255, 230, 0, 0.4)' : 'none',
               }}
             />
           );

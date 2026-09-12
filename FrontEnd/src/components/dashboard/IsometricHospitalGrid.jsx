@@ -173,7 +173,7 @@ export default function IsometricHospitalGrid({ isAnomaly = false }) {
       {/* Loading placeholder skeleton while 3D model initializes */}
       {!isLoaded && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-[#94a3b8] pointer-events-none">
-          <div className="w-8 h-8 rounded-full border-2 border-[#ffe600] border-t-transparent animate-spin mb-3 shadow-[0_0_15px_#ffe600]" />
+          <div className="w-8 h-8 rounded-full border-2 border-[#ffe600] border-t-transparent animate-spin mb-3" />
           <span className="text-xs font-mono tracking-wider text-slate-400">
             INITIALIZING 3D HOSPITAL TWIN...
           </span>

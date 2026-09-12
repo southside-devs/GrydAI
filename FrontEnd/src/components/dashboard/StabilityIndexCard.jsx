@@ -7,7 +7,7 @@ export default function StabilityIndexCard({ stability = 0.0, status = 'Standby'
   const strokeDashoffset = circumference - (stability / 100) * circumference;
 
   return (
-    <div className="flex-1 bg-[#0b0e14]/90 border border-white/[0.08] rounded-2xl p-5 flex flex-col justify-between backdrop-blur-md relative overflow-hidden group hover:border-[#ffe600]/30 transition-all duration-300">
+    <div className="flex-1 bg-[#0b0e14] border border-white/[0.08] rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden group hover:border-[#ffe600]/30 transition-all duration-300">
       <div className="flex items-center justify-between">
         <span className="text-base font-semibold text-[#94a3b8] tracking-wide">
           Grid Stability Index
@@ -38,9 +38,6 @@ export default function StabilityIndexCard({ stability = 0.0, status = 'Standby'
             strokeDashoffset={strokeDashoffset}
             strokeLinecap="round"
             className="transition-all duration-500 ease-out"
-            style={{
-              filter: 'drop-shadow(0 0 6px rgba(255, 230, 0, 0.6))',
-            }}
           />
         </svg>
 

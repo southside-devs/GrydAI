@@ -89,10 +89,6 @@ export default function LandingPage({ onReplay, onReload }) {
 
   return (
     <div className="min-h-screen w-full bg-[#000000] text-slate-100 flex flex-col justify-between p-6 lg:p-10 relative overflow-hidden select-none">
-      {/* Subtle Ambient Accent Lights */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-sky-500/[0.03] blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-amber-500/[0.03] blur-[120px] rounded-full pointer-events-none" />
-
       {/* 1. UNIVERSAL NAVBAR (Dashboard, Analytics, Diagnostics) */}
       <Navbar
         activeTab={activeTab}
@@ -101,7 +97,7 @@ export default function LandingPage({ onReplay, onReload }) {
         onReload={onReload}
       />
 
-      {/* 2. MAIN CENTER HERO & ISOMETRIC VIEW (WITH GLASSY TAB TRANSITION) */}
+      {/* 2. MAIN CENTER HERO & ISOMETRIC VIEW (WITH SOLID TAB TRANSITION) */}
       <div className="flex-1 flex flex-col justify-center relative z-10 my-2">
         {/* DASHBOARD VIEW */}
         <div
@@ -116,7 +112,7 @@ export default function LandingPage({ onReplay, onReload }) {
               <div className="space-y-4">
                 <h1 className="text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-[1.15] font-display">
                   Real-Time{' '}
-                  <span className="text-[#ffe600] drop-shadow-[0_0_15px_rgba(255,230,0,0.5)]">
+                  <span className="text-[#ffe600]">
                     Predictive
                   </span>
                   <br />
@@ -127,7 +123,7 @@ export default function LandingPage({ onReplay, onReload }) {
                 </p>
               </div>
 
-              <div className="inline-flex items-center justify-between bg-[#0d121c]/90 border border-white/[0.08] rounded-xl p-3.5 max-w-[270px] shadow-lg backdrop-blur-sm">
+              <div className="inline-flex items-center justify-between bg-[#0d121c] border border-white/[0.08] rounded-xl p-3.5 max-w-[270px]">
                 <div>
                   <div className="text-[11px] font-mono tracking-widest text-[#64748b] uppercase font-semibold">
                     GRID ACTIVE
@@ -165,8 +161,7 @@ export default function LandingPage({ onReplay, onReload }) {
               : 'opacity-0 translate-y-4 pointer-events-none hidden'
           }`}
         >
-          <div className="bg-[#0c1017]/80 border border-white/[0.08] backdrop-blur-xl rounded-3xl p-8 max-w-4xl mx-auto shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-80 h-80 bg-[#ffe600]/[0.03] blur-[80px] rounded-full pointer-events-none" />
+          <div className="bg-[#0c1017] border border-white/[0.08] rounded-3xl p-8 max-w-4xl mx-auto relative overflow-hidden">
             <div className="flex items-center justify-between border-b border-white/[0.06] pb-4 mb-6">
               <div>
                 <span className="text-[10px] font-mono tracking-widest text-[#ffe600] uppercase font-bold">
@@ -221,8 +216,7 @@ export default function LandingPage({ onReplay, onReload }) {
               : 'opacity-0 translate-y-4 pointer-events-none hidden'
           }`}
         >
-          <div className="bg-[#0c1017]/80 border border-white/[0.08] backdrop-blur-xl rounded-3xl p-8 max-w-4xl mx-auto shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-80 h-80 bg-cyan-500/[0.03] blur-[80px] rounded-full pointer-events-none" />
+          <div className="bg-[#0c1017] border border-white/[0.08] rounded-3xl p-8 max-w-4xl mx-auto relative overflow-hidden">
             <div className="flex items-center justify-between border-b border-white/[0.06] pb-4 mb-6">
               <div>
                 <span className="text-[10px] font-mono tracking-widest text-[#06b6d4] uppercase font-bold">

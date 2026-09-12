@@ -82,16 +82,16 @@ export default function Navbar({
           <img
             src="/assets/Clean BG.png"
             alt="GrydAI"
-            className="h-60 w-auto max-w-[620px] object-contain drop-shadow-[0_0_50px_rgba(255,230,0,0.9)] group-hover:scale-105 group-hover:drop-shadow-[0_0_75px_rgba(255,230,0,1)] transition-all duration-300"
+            className="h-60 w-auto max-w-[620px] object-contain group-hover:scale-105 transition-all duration-300"
           />
         </button>
       </div>
 
-      {/* Navigation Tabs with Glassy Sliding Ease Indicator */}
-      <nav className="relative flex items-center bg-[#0d121c]/90 border border-white/[0.08] rounded-full p-1 shadow-lg backdrop-blur-md overflow-hidden">
-        {/* Animated Glassy Gliding Pill */}
+      {/* Navigation Tabs with Solid Sliding Ease Indicator */}
+      <nav className="relative flex items-center bg-[#0d121c] border border-white/[0.08] rounded-full p-1 overflow-hidden">
+        {/* Animated Solid Gliding Pill */}
         <div
-          className="absolute top-1 bottom-1 rounded-full bg-white/[0.08] border border-white/[0.18] backdrop-blur-2xl shadow-[0_0_15px_rgba(255,255,255,0.08)] transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] pointer-events-none"
+          className="absolute top-1 bottom-1 rounded-full bg-white/[0.08] border border-white/[0.18] transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] pointer-events-none"
           style={{
             width: 'calc((100% - 8px) / 3)',
             transform: `translateX(${
@@ -112,7 +112,7 @@ export default function Navbar({
               onClick={() => setActiveTab(tab)}
               className={`relative z-10 px-7 py-2.5 rounded-full text-base font-medium transition-colors duration-500 cursor-pointer ${
                 isActive
-                  ? 'text-white font-bold drop-shadow-[0_0_10px_rgba(255,255,255,0.6)]'
+                  ? 'text-white font-bold'
                   : 'text-[#94a3b8] hover:text-white'
               }`}
             >
@@ -126,17 +126,17 @@ export default function Navbar({
       <div className="flex items-center gap-3.5">
         {/* SIM / Hardware Connection Status (Live WebSocket State) */}
         <div
-          className={`flex items-center gap-2.5 text-sm font-mono px-4.5 py-2.5 rounded-full border transition-all duration-500 cursor-default select-none backdrop-blur-md ${
+          className={`flex items-center gap-2.5 text-sm font-mono px-4.5 py-2.5 rounded-full border transition-all duration-500 cursor-default select-none ${
             isConnected
-              ? 'bg-[#10b981]/15 border-[#10b981]/40 text-[#10b981] shadow-[0_0_12px_rgba(16,185,129,0.2)]'
-              : 'bg-[#ef4444]/15 border-[#ef4444]/40 text-[#ef4444] shadow-[0_0_12px_rgba(239,68,68,0.2)]'
+              ? 'bg-[#10b981]/15 border-[#10b981]/40 text-[#10b981]'
+              : 'bg-[#ef4444]/15 border-[#ef4444]/40 text-[#ef4444]'
           }`}
         >
           <span
             className={`w-3 h-3 rounded-full transition-all duration-300 ${
               isConnected
-                ? 'bg-[#10b981] shadow-[0_0_8px_#10b981]'
-                : 'bg-[#ef4444] shadow-[0_0_8px_#ef4444] animate-pulse'
+                ? 'bg-[#10b981]'
+                : 'bg-[#ef4444] animate-pulse'
             }`}
           />
           <span className="font-bold tracking-wider text-sm">
@@ -153,7 +153,7 @@ export default function Navbar({
           >
             <Bell size={18} />
             {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-[#ffe600] text-[#080b11] text-[10px] font-mono font-black rounded-full flex items-center justify-center ring-2 ring-[#080b11] shadow-[0_0_8px_#ffe600]">
+              <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-[#ffe600] text-[#080b11] text-[10px] font-mono font-black rounded-full flex items-center justify-center ring-2 ring-[#080b11]">
                 {unreadCount}
               </span>
             )}
@@ -161,7 +161,7 @@ export default function Navbar({
 
           {/* Activity Notifications Popup */}
           {showNotifications && (
-            <div className="absolute right-0 top-14 w-88 sm:w-96 rounded-2xl bg-[#0c1017]/95 border border-white/[0.14] p-5 shadow-[0_20px_50px_rgba(0,0,0,0.85)] backdrop-blur-xl z-50 animate-in fade-in zoom-in-95 duration-200 text-left">
+            <div className="absolute right-0 top-14 w-88 sm:w-96 rounded-2xl bg-[#0c1017] border border-white/[0.14] p-5 z-50 animate-in fade-in zoom-in-95 duration-200 text-left">
               {/* Header */}
               <div className="flex items-center justify-between pb-3.5 border-b border-white/[0.08]">
                 <div className="flex items-center gap-2.5">
@@ -230,7 +230,7 @@ export default function Navbar({
                       </p>
                     </div>
                     {item.unread && (
-                      <span className="w-2 h-2 rounded-full bg-[#ffe600] shrink-0 mt-2 shadow-[0_0_6px_#ffe600]" />
+                      <span className="w-2 h-2 rounded-full bg-[#ffe600] shrink-0 mt-2" />
                     )}
                   </div>
                 ))}
@@ -253,17 +253,17 @@ export default function Navbar({
           <button
             onClick={() => setShowProfile((prev) => !prev)}
             title="Supervisor Profile"
-            className="w-11 h-11 rounded-full bg-[#1e283d] hover:bg-[#283552] border border-white/[0.15] hover:border-[#ffe600]/50 flex items-center justify-center text-base font-mono font-bold text-white shadow-inner transition-all duration-200 cursor-pointer focus:outline-none"
+            className="w-11 h-11 rounded-full bg-[#1e283d] hover:bg-[#283552] border border-white/[0.15] hover:border-[#ffe600]/50 flex items-center justify-center text-base font-mono font-bold text-white transition-all duration-200 cursor-pointer focus:outline-none"
           >
             AM
           </button>
 
           {/* Simple Clean Profile Popup */}
           {showProfile && (
-            <div className="absolute right-0 top-14 w-88 sm:w-96 rounded-2xl bg-[#0c1017]/95 border border-white/[0.14] p-5 shadow-[0_20px_50px_rgba(0,0,0,0.85)] backdrop-blur-xl z-50 animate-in fade-in zoom-in-95 duration-200 text-left">
+            <div className="absolute right-0 top-14 w-88 sm:w-96 rounded-2xl bg-[#0c1017] border border-white/[0.14] p-5 z-50 animate-in fade-in zoom-in-95 duration-200 text-left">
               {/* Operator Header */}
               <div className="flex items-center gap-3.5 pb-4 border-b border-white/[0.08]">
-                <div className="w-16 h-16 rounded-full bg-[#ffe600]/20 border border-[#ffe600]/60 flex items-center justify-center font-mono font-bold text-xl text-[#ffe600] shadow-[0_0_16px_rgba(255,230,0,0.35)] shrink-0">
+                <div className="w-16 h-16 rounded-full bg-[#ffe600]/20 border border-[#ffe600]/60 flex items-center justify-center font-mono font-bold text-xl text-[#ffe600] shrink-0">
                   AM
                 </div>
                 <div className="min-w-0 flex-1">
