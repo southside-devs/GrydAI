@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import Navbar from './Navbar';
-import TelemetryCard from './dashboard/TelemetryCard';
+import VoltageTelemetryCard from './dashboard/VoltageTelemetryCard';
+import CurrentTelemetryCard from './dashboard/CurrentTelemetryCard';
 import StabilityIndexCard from './dashboard/StabilityIndexCard';
-import ImpactCard from './dashboard/ImpactCard';
 import TotalEnergyCard from './dashboard/TotalEnergyCard';
 import IsometricHospitalGrid from './dashboard/IsometricHospitalGrid';
 import AIDetectionBanner from './dashboard/AIDetectionBanner';
+import TransformerEventCard from './dashboard/TransformerEventCard';
 
 export default function LandingPage({ onReplay, onReload }) {
   const [activeTab, setActiveTab] = useState('Dashboard');
@@ -142,12 +143,17 @@ export default function LandingPage({ onReplay, onReload }) {
               <IsometricHospitalGrid isAnomaly={isAnomaly} />
             </div>
 
-            <div className="lg:col-span-3 flex justify-end items-start">
+            <div className="lg:col-span-3 flex flex-col items-end gap-4">
               <AIDetectionBanner
                 confidence={isAnomaly ? 94.8 : 0.0}
                 title="Power Outage"
                 status={isAnomaly ? 'CONFIRMED' : 'STANDBY'}
                 isAnomaly={isAnomaly}
+              />
+              <TransformerEventCard
+                transformerId="TX-02"
+                time="00:00"
+                nodeLabel="LV Winding Phase-B"
               />
             </div>
           </main>
@@ -207,58 +213,29 @@ export default function LandingPage({ onReplay, onReload }) {
             </div>
           </div>
         </div>
-
-        {/* DIAGNOSTICS VIEW */}
-        <div
-          className={`w-full transition-all duration-750 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-            activeTab === 'Diagnostics'
-              ? 'opacity-100 translate-y-0 pointer-events-auto'
-              : 'opacity-0 translate-y-4 pointer-events-none hidden'
-          }`}
-        >
-          <div className="bg-[#0c1017] border border-white/[0.08] rounded-3xl p-8 max-w-4xl mx-auto relative overflow-hidden">
-            <div className="flex items-center justify-between border-b border-white/[0.06] pb-4 mb-6">
-              <div>
-                <span className="text-[10px] font-mono tracking-widest text-[#06b6d4] uppercase font-bold">
-                  HARDWARE HEALTH // DIAGNOSTICS
-                </span>
-                <h2 className="text-2xl font-bold font-display text-white mt-1">
-                  Substation Node Health
-                </h2>
-              </div>
-              <div className="px-3 py-1 rounded-full bg-[#06b6d4]/10 border border-[#06b6d4]/30 text-[#06b6d4] text-xs font-mono">
-                DIAGNOSTIC BUS • READY
-              </div>
-            </div>
-            <div className="space-y-3">
-              {[
-                { name: 'Feeder Sub-Transformer 01', status: 'Standby', code: 'NODE_0x00' },
-                { name: 'Hospital Critical Circuit Backup', status: 'Standby', code: 'NODE_0x01' },
-                { name: 'Solar PV Inverter Coupling', status: 'Standby', code: 'NODE_0x02' },
-                { name: 'Lithium BESS Energy Storage Link', status: 'Standby', code: 'NODE_0x03' },
-              ].map((node) => (
-                <div key={node.name} className="flex items-center justify-between p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:border-white/[0.1] transition-all">
-                  <div className="flex items-center gap-3">
-                    <span className="w-2 h-2 rounded-full bg-[#64748b]" />
-                    <span className="text-sm font-medium text-white">{node.name}</span>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs font-mono">
-                    <span className="text-[#64748b]">{node.code}</span>
-                    <span className="px-2 py-0.5 rounded bg-white/[0.05] text-[#94a3b8]">{node.status}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* 3. BOTTOM TELEMETRY DOCK */}
       <footer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 z-20 mt-2">
-        <TelemetryCard telemetry={telemetry} />
-        <StabilityIndexCard stability={stability} status={isAnomaly ? 'Warning' : 'Standby'} />
-        <ImpactCard earning={0.00} co2SavedKm="0" co2OffsetMt="0.0" />
-        <TotalEnergyCard percentage={energyPercent} currentKw={currentKw} limitKw={8} />
+        <VoltageTelemetryCard
+          voltage={telemetry.voltage}
+          frequency={telemetry.frequency}
+          waveform={telemetry.waveform}
+        />
+        <CurrentTelemetryCard
+          current={telemetry.current}
+          frequency={telemetry.frequency}
+          waveform={telemetry.waveform}
+        />
+        <StabilityIndexCard
+          stability={stability}
+          status={isAnomaly ? 'Warning' : 'Standby'}
+        />
+        <TotalEnergyCard
+          percentage={energyPercent}
+          currentKw={currentKw}
+          limitKw={0}
+        />
       </footer>
     </div>
   );
