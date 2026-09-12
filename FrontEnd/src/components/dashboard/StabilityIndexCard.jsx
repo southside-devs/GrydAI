@@ -6,6 +6,11 @@ export default function StabilityIndexCard({ stability = 0.0, status = 'Standby'
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (stability / 100) * circumference;
 
+  const isCritical = status === 'Critical';
+  const isWarning = status === 'Warning';
+  const statusColorClass = isCritical ? 'text-[#ef4444]' : (isWarning ? 'text-[#ffe600]' : 'text-[#10b981]');
+  const strokeColor = isCritical ? '#ef4444' : (isWarning ? '#ffe600' : '#10b981');
+
   return (
     <div className="flex-1 bg-[#0b0e14] border border-white/[0.08] rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden group hover:border-[#ffe600]/30 transition-all duration-300">
       <div className="flex items-center justify-between">
@@ -31,7 +36,7 @@ export default function StabilityIndexCard({ stability = 0.0, status = 'Standby'
             cx="56"
             cy="56"
             r={radius}
-            stroke="#ffe600"
+            stroke={strokeColor}
             strokeWidth="5"
             fill="transparent"
             strokeDasharray={circumference}
@@ -50,7 +55,7 @@ export default function StabilityIndexCard({ stability = 0.0, status = 'Standby'
 
       <div className="flex items-center justify-between text-sm font-mono pt-1">
         <span className="text-[#64748b]">Status</span>
-        <span className="text-[#ffe600] font-bold">{status}</span>
+        <span className={`${statusColorClass} font-bold`}>{status}</span>
       </div>
     </div>
   );

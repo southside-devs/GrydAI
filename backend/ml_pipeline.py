@@ -22,7 +22,13 @@ class GridAnomalyDetector:
         # Feature Rolling Window (10 samples @ 10 Hz = 1.0 second)
         self.window_size = 10
         self.raw_history = collections.deque(maxlen=self.window_size)
-        self.status_history = collections.deque(maxlen=3)
+        
+        # State Machine Tracking with Hysteresis & Persistence
+        self.current_status = 0
+        self.hold_timer = 0  # In samples (15 samples = 1.5 seconds hold time)
+        self.candidate_status = 0
+        self.candidate_count = 0
+        self.smooth_z = -0.5
         
         # ML Models
         self.scaler = StandardScaler()
@@ -104,6 +110,13 @@ class GridAnomalyDetector:
         self.sigma_mse = max(0.010, float(np.std(mse_errors)))
         self.is_calibrated = True
         
+        # Reset state machine tracking
+        self.current_status = 0
+        self.hold_timer = 0
+        self.candidate_status = 0
+        self.candidate_count = 0
+        self.smooth_z = -0.5
+        
         return {
             "status": "success",
             "samples_used": len(historical_metrics),
@@ -120,13 +133,8 @@ class GridAnomalyDetector:
     ) -> Dict[str, Any]:
         """
         Evaluates a single 10 Hz telemetry sample through the ML pipeline.
-        Returns the Contract 2 'ai_prediction' object:
-        {
-            "anomaly_score": float,
-            "grid_status": int (0, 1, or 2),
-            "message": str,
-            "reconstruction_mse": float
-        }
+        Implements a Schmitt-trigger dual hysteresis state machine to guarantee
+        zero chatter and deterministic transitions between Normal (0), Warning (1), and Critical (2).
         """
         self.raw_history.append((v_sim, i_sim))
         
@@ -139,9 +147,9 @@ class GridAnomalyDetector:
             dv = 0.0
             di = 0.0
 
-        # Soft-clamp dv and di to avoid single-step wiper noise explosion
-        dv = float(np.clip(dv, -2.5, 2.5))
-        di = float(np.clip(di, -1.2, 1.2))
+        # Soft-clamp dv and di to avoid single-step wiper contact friction explosion
+        dv = float(np.clip(dv, -1.5, 1.5))
+        di = float(np.clip(di, -0.8, 0.8))
             
         feat_vector = np.array([[v_sim, i_sim, dv, di]])
         scaled_vector = self.scaler.transform(feat_vector)
@@ -151,57 +159,109 @@ class GridAnomalyDetector:
         raw_mse = float(np.mean((scaled_vector - reconstructed) ** 2))
         
         # Z-Score relative to calibrated baseline
-        z_score = (raw_mse - self.mu_mse) / self.sigma_mse
+        raw_z = (raw_mse - self.mu_mse) / self.sigma_mse
         
-        # Calculate smooth anomaly score bounded between -1.00 (stable) and +1.00 (critical)
-        if z_score <= 1.0:
-            norm_score = -0.85 + (z_score * 0.15) # Stays around -0.85 to -0.70 during normal baseline
-        else:
-            norm_score = min(1.0, -0.70 + (z_score - 1.0) * 0.35)
-            
-        # State Machine Evaluation
-        # Physical emergency overrides:
-        if fault_btn == 1:
-            raw_status = 2
-            message = "CRITICAL: Instantaneous Line Break Triggered"
-            norm_score = 1.00
-        elif z_score > 3.5 or i_sim > 23.0 or v_sim < 198.0 or v_sim > 242.0:
-            raw_status = 2
-            norm_score = max(0.75, norm_score)
-            if i_sim > 23.0:
-                message = "CRITICAL: Severe Feeder Overload / EV Surge"
-            elif v_sim < 198.0:
-                message = "CRITICAL: Severe Transformer Winding Sag"
-            else:
-                message = "CRITICAL: High Voltage Surge & Distortion"
-        elif z_score > 2.0 or i_sim > 18.5 or v_sim < 210.0 or v_sim > 230.0:
-            raw_status = 1
-            norm_score = max(0.20, norm_score)
-            if i_sim > 18.5:
-                message = "Warning: Abnormal Current Surge Detected"
-            elif v_sim < 210.0 or v_sim > 230.0:
-                message = "Warning: Voltage Sag & Waveform Distortion"
-            else:
-                message = "Warning: Micro-Fluctuation Detected"
-        else:
-            raw_status = 0
-            message = "System Stable - Normal Feeder Telemetry"
-            norm_score = max(-1.0, min(-0.65, norm_score))
+        # Exponential Moving Average filter on Z-score for smooth meter needle movement
+        self.smooth_z = 0.25 * raw_z + 0.75 * self.smooth_z
+        effective_z = self.smooth_z
 
-        # Debounce filter: Emergency button trips immediately; otherwise require 2-sample
-        # consensus to eliminate single-sample ADC noise jitter
+        # ---------------------------------------------------------------------
+        # State Machine Evaluation with Dual Hysteresis & Latch Hold Time
+        # ---------------------------------------------------------------------
+        # 1. Catastrophic Push-Button Fault: Instantaneous 0 ms trip
         if fault_btn == 1:
-            self.status_history.clear()
-            self.status_history.append(2)
-            grid_status = 2
+            self.current_status = 2
+            self.hold_timer = 20  # Hold for at least 2.0s
+            self.candidate_count = 0
+            return {
+                "anomaly_score": 1.000,
+                "grid_status": 2,
+                "message": "CRITICAL: Instantaneous Line Break Triggered",
+                "reconstruction_mse": round(raw_mse, 6),
+                "z_score": round(effective_z, 2)
+            }
+
+        # 2. Raw Level Detection (Current, Voltage, or Autoencoder Z-Score)
+        is_critical = (i_sim >= 23.0) or (v_sim <= 196.0) or (v_sim >= 244.0) or (effective_z >= 4.5)
+        is_warning = (i_sim >= 18.5) or (v_sim <= 208.0) or (v_sim >= 232.0) or (effective_z >= 2.0)
+
+        target_status = 2 if is_critical else (1 if is_warning else 0)
+
+        # Decrement minimum hold timer
+        if self.hold_timer > 0:
+            self.hold_timer -= 1
+
+        # 3. State Transitions with Hysteresis and Persistence
+        if target_status > self.current_status:
+            # Escalating (0 -> 1 or 1 -> 2): Require 3 consecutive samples (300 ms)
+            if target_status == self.candidate_status:
+                self.candidate_count += 1
+            else:
+                self.candidate_status = target_status
+                self.candidate_count = 1
+
+            if self.candidate_count >= 3:
+                self.current_status = target_status
+                self.hold_timer = 15  # Latch for at least 1.5 seconds on escalation
+                self.candidate_count = 0
+        elif target_status < self.current_status:
+            # De-escalating (2 -> 1 or 1 -> 0): Must clear hysteresis AND hold timer must have expired
+            can_downgrade = False
+            if self.hold_timer == 0:
+                if self.current_status == 2:
+                    # Critical to Warning hysteresis gap
+                    if (i_sim < 21.5) and (200.0 < v_sim < 240.0) and (effective_z < 3.8):
+                        can_downgrade = True
+                elif self.current_status == 1:
+                    # Warning to Normal hysteresis gap
+                    if (i_sim < 17.5) and (212.0 < v_sim < 228.0) and (effective_z < 1.5):
+                        can_downgrade = True
+
+            if can_downgrade:
+                if target_status == self.candidate_status:
+                    self.candidate_count += 1
+                else:
+                    self.candidate_status = target_status
+                    self.candidate_count = 1
+
+                # Require 5 consecutive clean samples (500 ms) to step down
+                if self.candidate_count >= 5:
+                    self.current_status = target_status
+                    self.candidate_count = 0
+            else:
+                self.candidate_count = 0
         else:
-            self.status_history.append(raw_status)
-            grid_status = collections.Counter(self.status_history).most_common(1)[0][0]
+            self.candidate_count = 0
+
+        # 4. Synchronized Dynamic Message and Anomaly Score
+        if self.current_status == 2:
+            norm_score = min(1.00, 0.75 + max(0.0, effective_z - 3.5) * 0.08)
+            if i_sim >= 23.0:
+                message = f"CRITICAL: Severe Feeder Overload ({i_sim:.1f}A)"
+            elif v_sim <= 196.0:
+                message = f"CRITICAL: Severe Transformer Winding Sag ({v_sim:.1f}V)"
+            elif v_sim >= 244.0:
+                message = f"CRITICAL: Catastrophic Voltage Surge ({v_sim:.1f}V)"
+            else:
+                message = f"CRITICAL: Severe Microgrid Harmonic Distortion (Z={effective_z:.1f})"
+        elif self.current_status == 1:
+            norm_score = min(0.70, 0.25 + max(0.0, effective_z - 1.5) * 0.15)
+            if i_sim >= 18.5:
+                message = f"Warning: High Feeder Demand / EV Surge ({i_sim:.1f}A)"
+            elif v_sim <= 208.0:
+                message = f"Warning: Secondary Feeder Voltage Sag ({v_sim:.1f}V)"
+            elif v_sim >= 232.0:
+                message = f"Warning: Feeder Overvoltage Swell ({v_sim:.1f}V)"
+            else:
+                message = f"Warning: Microgrid Harmonic Distortion (Z={effective_z:.1f})"
+        else:
+            norm_score = max(-1.0, min(-0.65, -0.85 + (effective_z * 0.10)))
+            message = "System Stable - Normal Feeder Telemetry"
 
         return {
-            "anomaly_score": round(norm_score, 3),
-            "grid_status": grid_status,
+            "anomaly_score": round(float(norm_score), 3),
+            "grid_status": int(self.current_status),
             "message": message,
-            "reconstruction_mse": round(raw_mse, 6),
-            "z_score": round(z_score, 2)
+            "reconstruction_mse": round(float(raw_mse), 6),
+            "z_score": round(float(effective_z), 2)
         }

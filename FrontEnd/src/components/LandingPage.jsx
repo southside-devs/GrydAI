@@ -24,6 +24,9 @@ export default function LandingPage({ onReplay, onReload }) {
   const [stability, setStability] = useState(0.0);
   const [energyPercent, setEnergyPercent] = useState(0);
   const [currentKw, setCurrentKw] = useState(0);
+  const [gridStatus, setGridStatus] = useState(0);
+  const [aiMessage, setAiMessage] = useState('System Stable - Normal Feeder Telemetry');
+  const [anomalyScore, setAnomalyScore] = useState(-0.75);
 
   useEffect(() => {
     let ws = null;
@@ -54,8 +57,13 @@ export default function LandingPage({ onReplay, onReload }) {
               if (data.metrics.current_kw !== undefined) setCurrentKw(data.metrics.current_kw);
             }
             if (data && data.ai_prediction) {
-              const status = data.ai_prediction.grid_status;
+              const status = Number(data.ai_prediction.grid_status ?? 0);
+              const msg = data.ai_prediction.message ?? 'System Stable';
+              const score = Number(data.ai_prediction.anomaly_score ?? -0.75);
+              setGridStatus(status);
               setIsAnomaly(status > 0);
+              setAiMessage(msg);
+              setAnomalyScore(score);
             }
           } catch (e) {}
         };
@@ -144,10 +152,10 @@ export default function LandingPage({ onReplay, onReload }) {
 
             <div className="lg:col-span-3 flex justify-end items-start">
               <AIDetectionBanner
-                confidence={isAnomaly ? 94.8 : 0.0}
-                title="Power Outage"
-                status={isAnomaly ? 'CONFIRMED' : 'STANDBY'}
-                isAnomaly={isAnomaly}
+                gridStatus={gridStatus}
+                confidence={gridStatus === 2 ? 98.4 : (gridStatus === 1 ? 87.2 : 0.0)}
+                message={aiMessage}
+                isAnomaly={gridStatus > 0}
               />
             </div>
           </main>
@@ -256,7 +264,10 @@ export default function LandingPage({ onReplay, onReload }) {
       {/* 3. BOTTOM TELEMETRY DOCK */}
       <footer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 z-20 mt-2">
         <TelemetryCard telemetry={telemetry} />
-        <StabilityIndexCard stability={stability} status={isAnomaly ? 'Warning' : 'Standby'} />
+        <StabilityIndexCard
+          stability={stability}
+          status={gridStatus === 2 ? 'Critical' : (gridStatus === 1 ? 'Warning' : 'Standby')}
+        />
         <ImpactCard earning={0.00} co2SavedKm="0" co2OffsetMt="0.0" />
         <TotalEnergyCard percentage={energyPercent} currentKw={currentKw} limitKw={8} />
       </footer>
