@@ -233,7 +233,7 @@ export default function LandingPage({ onReplay, onReload }) {
   }, []);
 
   return (
-    <div className="min-h-screen w-full bg-[#000000] text-slate-100 flex flex-col justify-between p-3 xs:p-4 sm:p-6 lg:p-8 xl:p-10 relative overflow-x-hidden select-none">
+    <div className="min-h-screen w-full bg-[#000000] text-slate-100 flex flex-col justify-between pt-2 sm:pt-3 lg:pt-4 px-3 xs:px-4 sm:px-6 lg:px-8 xl:px-10 pb-3 xs:pb-4 sm:pb-6 lg:pb-8 xl:pb-10 relative overflow-x-hidden select-none">
       {/* 1. UNIVERSAL NAVBAR (Dashboard, Analytics) */}
       <Navbar
         activeTab={activeTab}
