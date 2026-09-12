@@ -57,8 +57,8 @@ export default function IsometricHospitalGrid({ isAnomaly = false }) {
             api.getCameraLookAt((err, camera) => {
               if (err || !camera) return;
 
-              // Calibrated gentle zoom in factor
-              const zoomFactor = 0.16;
+              // Calibrated isometric building framing factor
+              const zoomFactor = 0.28;
               const dx = camera.position[0] - camera.target[0];
               const dy = camera.position[1] - camera.target[1];
               const dz = camera.position[2] - camera.target[2];
