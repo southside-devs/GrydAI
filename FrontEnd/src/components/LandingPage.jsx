@@ -7,7 +7,6 @@ import StabilityIndexCard from './dashboard/StabilityIndexCard';
 import TotalEnergyCard from './dashboard/TotalEnergyCard';
 import IsometricHospitalGrid from './dashboard/IsometricHospitalGrid';
 import AIDetectionBanner from './dashboard/AIDetectionBanner';
-import TransformerEventCard from './dashboard/TransformerEventCard';
 import AnalyticsView from './dashboard/AnalyticsView';
 
 export default function LandingPage({ onReplay, onReload }) {
@@ -305,14 +304,6 @@ export default function LandingPage({ onReplay, onReload }) {
                   confidence={gridStatus === 2 ? 98.4 : (gridStatus === 1 ? 87.2 : 0.0)}
                   message={aiMessage}
                   isAnomaly={gridStatus > 0}
-                />
-              </div>
-              <div className="w-full max-w-[260px] xs:max-w-[280px] sm:max-w-60">
-                <TransformerEventCard
-                  transformerId="TX-02"
-                  time="00:00"
-                  nodeLabel="LV Winding Phase-B"
-                  onReport={handleReportEvent}
                 />
               </div>
             </div>
