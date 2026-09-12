@@ -12,6 +12,11 @@ build/
 dist/
 *.egg-info/
 
+#front
+# Node / Vite
+node_modules/
+dist/
+=======
 # Node / Next.js (For Frontend Team)
 node_modules/
 .next/
