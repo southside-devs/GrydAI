@@ -93,18 +93,16 @@ export default function Navbar({
         <div
           className="absolute top-1 bottom-1 rounded-full bg-white/[0.08] border border-white/[0.18] transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] pointer-events-none"
           style={{
-            width: 'calc((100% - 8px) / 3)',
+            width: 'calc((100% - 8px) / 2)',
             transform: `translateX(${
               activeTab === 'Dashboard'
                 ? '0%'
-                : activeTab === 'Analytics'
-                ? '100%'
-                : '200%'
+                : '100%'
             })`,
           }}
         />
 
-        {['Dashboard', 'Analytics', 'Diagnostics'].map((tab) => {
+        {['Dashboard', 'Analytics'].map((tab) => {
           const isActive = activeTab === tab;
           return (
             <button
