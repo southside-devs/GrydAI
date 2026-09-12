@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrowUpRight, Zap } from 'lucide-react';
 
-export default function TotalEnergyCard({ percentage = 0, currentKw = 0, limitKw = 0 }) {
+export default function TotalEnergyCard({ percentage = 0, currentKw = 0, limitKw = 8 }) {
   const radius = 45;
   const cx = 65;
   const cy = 60;
@@ -12,7 +12,7 @@ export default function TotalEnergyCard({ percentage = 0, currentKw = 0, limitKw
     <div className="flex-1 bg-[#0b0e14] border border-white/[0.08] rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden group hover:border-[#ffe600]/30 transition-all duration-300">
       <div className="flex items-center justify-between">
         <span className="text-sm font-mono font-bold tracking-wider text-[#94a3b8] uppercase">
-          TOTAL ENERGY
+          TRANSFORMER LOAD
         </span>
         <button className="text-[#64748b] hover:text-[#ffe600] transition-colors cursor-pointer">
           <ArrowUpRight size={20} />
@@ -64,7 +64,7 @@ export default function TotalEnergyCard({ percentage = 0, currentKw = 0, limitKw
       </div>
 
       <div className="flex items-center justify-between text-xs font-mono text-[#64748b] pt-1">
-        <span className="uppercase">PEAK DEMAND CAP</span>
+        <span className="uppercase">FEEDER CAPACITY</span>
         <span className="text-[#94a3b8] font-medium">{limitKw} kW Limit</span>
       </div>
     </div>

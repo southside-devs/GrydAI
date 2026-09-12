@@ -258,7 +258,7 @@ export default function LandingPage({ onReplay, onReload }) {
         <TelemetryCard telemetry={telemetry} />
         <StabilityIndexCard stability={stability} status={isAnomaly ? 'Warning' : 'Standby'} />
         <ImpactCard earning={0.00} co2SavedKm="0" co2OffsetMt="0.0" />
-        <TotalEnergyCard percentage={energyPercent} currentKw={currentKw} limitKw={0} />
+        <TotalEnergyCard percentage={energyPercent} currentKw={currentKw} limitKw={8} />
       </footer>
     </div>
   );
