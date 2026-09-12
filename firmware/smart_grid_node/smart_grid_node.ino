@@ -288,10 +288,9 @@ void loop() {
 
   // 4. Fail-Safe Offline Keepalive Check
   if (currentMillis - lastHeartbeatTime > HEARTBEAT_TIMEOUT_MS) {
-    // Backend disconnected: Default to gentle Green/Yellow alive state
-    if (cachedFaultBtn == LOW) {
-      digitalWrite(PIN_LED_GREEN, HIGH);
-      digitalWrite(PIN_LED_RED, LOW);
+    // Backend disconnected: Gracefully default to gentle Green state once
+    if (cachedFaultBtn == LOW && aiStatus != 0) {
+      setStatusLeds(0);
     }
   }
 }

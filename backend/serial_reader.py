@@ -199,7 +199,14 @@ class SerialTelemetryBridge:
                     if line.startswith("{") and line.endswith("}"):
                         raw_packet = json.loads(line)
                 except Exception as e:
-                    logger.debug(f"Serial read error: {e}")
+                    logger.warning(f"Serial connection interrupted: {e}. Auto-reconnecting...")
+                    try:
+                        self.serial_conn.close()
+                    except Exception:
+                        pass
+                    self.serial_conn = None
+                    time.sleep(1.0)
+                    self._connect_serial()
 
             if raw_packet:
                 try:
