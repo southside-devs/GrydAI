@@ -12,24 +12,33 @@ smart-grid-node/
 ├── /backend                  # Python Ingestion & ML
 │   ├── main.py               # FastAPI server & WebSocket endpoints
 │   ├── serial_reader.py      # Background thread for PySerial
-│   ├── ml_pipeline.py        # Scikit-Learn Isolation Forest logic
+│   ├── ml_pipeline.py        # Scikit-Learn Autoencoder & Isolation Forest
+│   ├── mock_generator.py     # 10Hz synthetic telemetry generator (--mock)
 │   └── requirements.txt      # pyserial, fastapi, uvicorn, scikit-learn, pandas
-└── /frontend                 # Next.js Web App
+└── /frontend                 # Next.js Web App (Managed by Frontend Team)
     ├── /src
-    │   ├── /components       # Mapbox UI, Charts, Status Indicators
-    │   ├── /hooks            # useWebSocket.js (Custom telemetry hook)
-    │   └── /pages            # index.tsx (Main dashboard)
+    │   ├── /app              # Next.js App Router (layout.tsx, page.tsx)
+    │   ├── /components       # MapLibre 3D UI, Charts, Status Indicators
+    │   └── /hooks            # useWebSocket.ts (Custom telemetry hook)
     ├── package.json          
     └── tailwind.config.js
 
-## 2. Port Assignments & Network Configuration
+## 2. Target End-Users & Field Deployment Topology
+
+*   **Primary End-User:** Regional Utility Distribution System Operators (DSOs) & Substation Engineers.
+*   **Secondary End-User:** Critical Facility Microgrid Engineers (Hospitals, Data Centers, Semiconductor Fabs).
+*   **Physical Deployment Point:** **Secondary Distribution Transformer** (the pole-mounted cylindrical "can" or ground pad-mount box stepped down from 11kV to 230V/120V, feeding a cluster of **10 to 50 households**).
+*   **Instrumentation Tap:** Low-voltage secondary side (230V) via standard non-intrusive Potential Transformers (PTs) and Current Transformers (CTs).
+*   **Simulated Node Identity:** **Transformer Node #TR-408 (Maple St. Feeder / Substation Alpha)**.
+
+## 3. Port Assignments & Network Configuration
 *   **Hackathon Environment Constraint:** Do NOT rely on external Wi-Fi for edge-to-backend communication.
 *   **Hardware → Backend:** USB Serial connection at **115200 baud**.
 *   **Backend Server:** FastAPI running via Uvicorn on `http://localhost:8000`.
 *   **WebSocket Endpoint:** `ws://localhost:8000/ws`
 *   **Frontend Server:** Next.js development server on `http://localhost:3000`.
 
-## 3. Hardware Architecture (ESP32)
+## 4. Hardware Architecture (ESP32)
 **Goal:** Read analog/digital pins, format as JSON, print to Serial. **No blocking delays.**
 
 *   **Pin Mappings:**
@@ -40,50 +49,79 @@ smart-grid-node/
     *   `LED Green (Digital):` Pin 25
     *   `LED Yellow (Digital):` Pin 26
     *   `LED Red (Digital):` Pin 27
-*   **Agent Constraint:** Use `millis()` for timing the 10Hz (100ms) loop. Do not use `delay(100)` as it will block incoming Serial commands (like LED state updates) from the backend.
+    *   `I2C OLED (SSD1306):` Pin 21 (SDA), Pin 22 (SCL)
+*   **Loop & Timing Constraints:** 
+    *   Use `millis()` for timing the 10Hz (100ms) telemetry loop. Do not use `delay()` as it blocks incoming Serial commands and telemetry pacing.
+    *   Update the SSD1306 OLED at **2Hz–3Hz** (every 300–500ms) or on immediate status change. This ensures the ~25ms I2C write time never throttles or disrupts the 10Hz serial stream.
+    *   Parse incoming reverse serial commands non-blockingly (`S:<status>:<score>\n`).
 
-## 4. Backend Architecture (Python / FastAPI)
-**Goal:** Ingest Serial data, evaluate via ML, broadcast to WebSockets.
+## 5. Backend Architecture (Python / FastAPI)
+**Goal:** Ingest Serial data, evaluate via ML, broadcast to WebSockets, and send reverse control to ESP32.
 
+*   **CLI Execution Modes:**
+    *   **Hardware Mode (Default):** `python main.py` connects to ESP32 via USB Serial (auto-detects port or takes `--port COM3`).
+    *   **Mock / Simulation Mode:** `python main.py --mock` runs without physical hardware, generating realistic synthetic 10Hz sine-wave telemetry matching Contract 1/2 for frontend and ML testing.
 *   **Concurrency Model:** 
-    *   FastAPI runs asynchronously. 
-    *   `pyserial.Serial.readline()` is blocking. It MUST be run in a separate Python `Thread` or using `asyncio.to_thread()` to prevent locking up the WebSocket event loop.
-*   **ML Data Window:** 
-    *   Maintain a rolling window (e.g., `collections.deque(maxlen=50)` or Pandas DataFrame).
-    *   The Isolation Forest `predict()` function requires a 2D array: `[[v1, i1], [v2, i2], ...]`.
-*   **Anomaly State Machine:**
-    *   Status `0`: MSE is within normal standard deviations.
-    *   Status `1`: MSE exceeds 2nd standard deviation (Warning/Yellow).
-    *   Status `2`: MSE exceeds 3rd standard deviation or Button == 1 (Critical/Red).
+    *   FastAPI runs asynchronously via Uvicorn.
+    *   `pyserial.Serial` reader runs in a dedicated background `threading.Thread` or `asyncio.to_thread()` to prevent locking up the async WebSocket loop.
+*   **ML Pipeline (Scikit-Learn Hybrid):** 
+    *   **Feature Extraction:** Rolling window (e.g. 10 samples / 1 second) computing $[V_{\text{sim}}, I_{\text{sim}}, \Delta V, \Delta I, \text{Solar}]$.
+    *   **Autoencoder:** Lightweight Scikit-Learn `MLPRegressor` (e.g., hidden layers `(8, 3, 8)`) trained on baseline "healthy" data.
+    *   **Reconstruction Metric:** Mean Squared Error (MSE) between input and reconstruction $\frac{1}{N}\sum (\mathbf{x} - \mathbf{\hat{x}})^2$.
+    *   **Anomaly Trigger:** Calibrated baseline statistics ($\mu_{\text{MSE}}$, $\sigma_{\text{MSE}}$) combined with `IsolationForest`:
+        *   Status `0` (Normal / Green): $\text{MSE} \le \mu + 2\sigma$
+        *   Status `1` (Warning / Yellow): $\mu + 2\sigma < \text{MSE} \le \mu + 3.5\sigma$
+        *   Status `2` (Critical / Red): $\text{MSE} > \mu + 3.5\sigma$ or `fault_btn == 1`
+*   **Reverse Control to Hardware:**
+    *   When status changes or at 2Hz heartbeat, backend sends `S:<grid_status>:<anomaly_score>\n` to ESP32 over serial.
 
-## 5. Frontend Architecture (Next.js)
-**Goal:** Connect to WebSocket, parse JSON, drive 3D Mapbox markers and Recharts graphs.
+## 6. Frontend Architecture (Next.js)
+**Goal:** Connect to WebSocket, parse JSON, drive 3D map markers and Recharts graphs.
 
-*   **State Management:** Use a single React context or a custom hook (`useTelemetry`) to manage the WebSocket connection and store the latest incoming JSON payload.
+*   **Framework:** Next.js (App Router) with Tailwind CSS.
+*   **State Management:** Use a custom hook (`useTelemetry`) to manage the WebSocket connection (`ws://localhost:8000/ws`) and store the latest incoming JSON payload.
 *   **Performance Constraint:** Telemetry arrives at 10Hz. Do not trigger a full page re-render 10 times a second. Isolate the incoming data state exclusively to the components that need it (the Chart and the Map Marker).
-*   **Mapbox Integration:** Use Mapbox GL JS to render a 3D dark-mode map. Bind the color of the grid node marker directly to the `ai_prediction.grid_status` integer (0 = Green, 1 = Yellow, 2 = Red).
+*   **Map Engine (MapLibre GL JS):**
+    *   Uses **MapLibre GL JS** (open-source, 100% token-free).
+    *   Style: CartoDB Dark Matter vector style (`https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json`).
+    *   Zero token/credit card registration required; fully immune to hackathon API outages.
+    *   Renders a 3D perspective grid with transmission lines and binds the primary substation node color directly to `ai_prediction.grid_status` (0 = Green, 1 = Yellow, 2 = Red pulsing).
 
-## 6. Strict Data Contracts (Immutable)
+## 7. Sensor Scaling & Calibration Formulas
 
-**Contract 1: ESP32 to Python (Serial String)**
+To map raw 12-bit ADC values (0–4095) to realistic electrical engineering units:
+*   **Grid Voltage ($V_{\text{sim}}$):** $180.0\text{V} + \left(\frac{v_{\text{raw}}}{4095.0} \times 80.0\text{V}\right)$
+    *   Midpoint (~2048 ADC) $\approx 220.0\text{V}$ (Normal operational range: 215V–225V).
+*   **Line Current ($I_{\text{sim}}$):** $\left(\frac{i_{\text{raw}}}{4095.0} \times 30.0\text{A}\right)$
+    *   Midpoint (~2048 ADC) $\approx 15.0\text{A}$ (Normal operational range: 14A–16A).
+*   **Catastrophic Button (`fault_btn`):** `0` = Closed/Normal, `1` = Pressed/Line Break (Instant Status 2 override).
+*   **Solar LDR (`solar_ldr` & `solar_efficiency`) [OPTIONAL / STRETCH GOAL]:**
+    *   If unwired/absent, defaults gracefully to `100.0%`.
+    *   When wired: $\text{Efficiency} = \left(\frac{\text{solar\_ldr}}{4095.0} \times 100.0\%\right)$.
+    *   Note: The core system prioritizes Voltage, Current, and Catastrophic Break; Solar is engaged only if time permits.
+
+## 8. Strict Data Contracts (Immutable)
+
+**Contract 1: ESP32 to Python (Serial String @ 10Hz)**
 ```json
 {
   "timestamp": 1694451234,
   "v_raw": 3102, 
   "i_raw": 1840,
-  "solar_ldr": 1024,
-  "fault_btn": 0
+  "fault_btn": 0,
+  "solar_ldr": 4095
 }
 ```
+*(Note: `solar_ldr` is optional; defaults to 4095 if unused).*
 
-**Contract 2: Python to Next.js (WebSocket Message)**
+**Contract 2: Python to Next.js (WebSocket Message @ 10Hz)**
 ```json
 {
   "timestamp": 1694451234,
   "metrics": {
     "voltage_sim": 220.5,
     "current_sim": 15.2,
-    "solar_efficiency": 98.5
+    "solar_efficiency": 100.0
   },
   "ai_prediction": {
     "anomaly_score": -0.85,
@@ -92,3 +130,11 @@ smart-grid-node/
   }
 }
 ```
+
+**Contract 3: Python to ESP32 (Reverse Serial String on Change / 2Hz Heartbeat)**
+```text
+S:<grid_status>:<anomaly_score>\n
+```
+* Example: `S:0:-0.85\n`
+* `grid_status`: `0` (Normal/Green), `1` (Warning/Yellow), `2` (Critical/Red)
+* `anomaly_score`: Float between -1.00 and 1.00 (or MSE score) for display on the OLED.
