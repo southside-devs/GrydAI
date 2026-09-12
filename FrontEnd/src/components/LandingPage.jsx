@@ -31,14 +31,71 @@ export default function LandingPage({ onReplay, onReload }) {
   const [gridStatus, setGridStatus] = useState(0);
   const [aiMessage, setAiMessage] = useState('System Stable - Normal Feeder Telemetry');
   const [anomalyScore, setAnomalyScore] = useState(-0.75);
+  const [currentMse, setCurrentMse] = useState(0.22);
+  const [preemptedOutages, setPreemptedOutages] = useState(14);
+  const prevStatusRef = useRef(0);
+
+  const [incidents, setIncidents] = useState([
+    {
+      asset: 'Feeder-ICU-01 (Maple St)',
+      timestamp: 'Today, 00:14:22',
+      classification: 'Micro-Arcing / Surge',
+      classColor: '#f59e0b',
+      action: 'AI SUPPRESSED',
+      actionStyle: 'bg-[#10b981]/15 text-[#10b981] border border-[#10b981]/30',
+    },
+    {
+      asset: 'Radiology Feeder 03',
+      timestamp: 'Yesterday, 18:30:10',
+      classification: 'Voltage Sag',
+      classColor: '#38bdf8',
+      action: 'BESS COMPENSATED',
+      actionStyle: 'bg-[#38bdf8]/15 text-[#38bdf8] border border-[#38bdf8]/30',
+    },
+    {
+      asset: 'Transformer TX-02',
+      timestamp: 'Sep 11, 09:12:44',
+      classification: 'Harmonic Distortion',
+      classColor: '#a855f7',
+      action: 'ACTIVE FILTERED',
+      actionStyle: 'bg-[#a855f7]/15 text-[#a855f7] border border-[#a855f7]/30',
+    },
+    {
+      asset: 'Emergency Wing B',
+      timestamp: 'Sep 09, 14:05:18',
+      classification: 'Feeder Demand Surge',
+      classColor: '#f59e0b',
+      action: 'PEAK SHAVED',
+      actionStyle: 'bg-[#f59e0b]/15 text-[#f59e0b] border border-[#f59e0b]/30',
+    },
+  ]);
+
+  const [incidentCategories, setIncidentCategories] = useState([
+    { label: 'Micro-Arcing', percent: 45, color: '#f59e0b', strokeColor: '#f59e0b' },
+    { label: 'Voltage Sags', percent: 30, color: '#38bdf8', strokeColor: '#38bdf8' },
+    { label: 'Harmonics', percent: 15, color: '#a855f7', strokeColor: '#a855f7' },
+    { label: 'Other', percent: 10, color: '#ea580c', strokeColor: '#ea580c' },
+  ]);
 
   const handleReportEvent = () => {
     if (notifTimeoutRef.current) clearTimeout(notifTimeoutRef.current);
+    const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     setNotification({
       title: 'Incident Reported',
       message: 'Event logged and reported',
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      time: nowTime,
     });
+    setIncidents((prev) => [
+      {
+        asset: 'Transformer TX-02 (LV Phase-B)',
+        timestamp: `Today, ${nowTime}`,
+        classification: 'Manual Inspection Dispatch',
+        classColor: '#facc15',
+        action: 'DISPATCHED',
+        actionStyle: 'bg-[#ffe600]/15 text-[#ffe600] border border-[#ffe600]/30',
+      },
+      ...prev.slice(0, 19),
+    ]);
     notifTimeoutRef.current = setTimeout(() => {
       setNotification(null);
     }, 3500);
@@ -76,10 +133,44 @@ export default function LandingPage({ onReplay, onReload }) {
               const status = Number(data.ai_prediction.grid_status ?? 0);
               const msg = data.ai_prediction.message ?? 'System Stable';
               const score = Number(data.ai_prediction.anomaly_score ?? -0.75);
+              const mse = Number(data.ai_prediction.reconstruction_mse ?? 0.22);
               setGridStatus(status);
               setIsAnomaly(status > 0);
               setAiMessage(msg);
               setAnomalyScore(score);
+              setCurrentMse(mse);
+
+              if (status > 0 && status !== prevStatusRef.current) {
+                const isCrit = status === 2;
+                const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const isSag = msg.toLowerCase().includes('sag');
+                const isBreak = msg.toLowerCase().includes('break');
+                const isOverload = msg.toLowerCase().includes('overload') || msg.toLowerCase().includes('demand');
+                const isHarmonic = msg.toLowerCase().includes('harmonic') || msg.toLowerCase().includes('phase');
+
+                const classification = isCrit
+                  ? (isBreak ? 'Line Break Trip' : (isOverload ? 'Feeder Overload' : 'Catastrophic Surge'))
+                  : (isSag ? 'Voltage Sag' : (isOverload ? 'Feeder Demand Surge' : (isHarmonic ? 'Harmonic Distortion' : 'Feeder Micro-Fluctuation')));
+
+                const classColor = isCrit ? '#ef4444' : (isSag ? '#38bdf8' : (isHarmonic ? '#a855f7' : '#f59e0b'));
+                const action = isCrit ? 'TRIP ISOLATED' : 'AI MITIGATED';
+                const actionStyle = isCrit
+                  ? 'bg-[#ef4444]/15 text-[#ef4444] border border-[#ef4444]/30'
+                  : 'bg-[#ffe600]/15 text-[#ffe600] border border-[#ffe600]/30';
+
+                const liveIncident = {
+                  asset: isCrit ? 'Transformer TX-02 (LV Phase-B)' : 'Feeder-ICU-01 (Maple St)',
+                  timestamp: `Today, ${nowTime}`,
+                  classification,
+                  classColor,
+                  action,
+                  actionStyle,
+                };
+
+                setIncidents((prev) => [liveIncident, ...prev.slice(0, 19)]);
+                setPreemptedOutages((prev) => prev + 1);
+              }
+              prevStatusRef.current = status;
             }
           } catch (e) {}
         };
@@ -203,7 +294,17 @@ export default function LandingPage({ onReplay, onReload }) {
               : 'opacity-0 translate-y-4 pointer-events-none hidden'
           }`}
         >
-          <AnalyticsView />
+          <AnalyticsView
+            preemptedOutages={preemptedOutages}
+            preemptedDelta="+3"
+            leadTimeSeconds={162}
+            mlPrecision={98.4}
+            mseThreshold={20.0}
+            currentMse={currentMse}
+            incidentsCount={incidents.length}
+            incidentCategories={incidentCategories}
+            incidents={incidents}
+          />
         </div>
       </div>
 
