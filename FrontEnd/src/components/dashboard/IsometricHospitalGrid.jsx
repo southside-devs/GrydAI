@@ -158,14 +158,9 @@ export default function IsometricHospitalGrid({ isAnomaly = false }) {
     );
   };
 
-  // Pinch / Scroll to Zoom
+  // Zoom locked to current preset: prevent wheel / scroll zooming
   const handleWheel = (e) => {
     e.preventDefault();
-    const s = stateRef.current;
-    if (s.radius) {
-      const zoomDelta = e.deltaY * 0.05;
-      s.radius = Math.max(15, Math.min(120, s.radius + zoomDelta));
-    }
   };
 
   return (

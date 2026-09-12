@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>GRYD AI // The Predictive Grid Revolution</title>
 <style>
   :root{
@@ -13,17 +14,20 @@
     --emerald:#10B981;
     --white:#FFFFFF;
   }
+  *, *::before, *::after { user-select: none; -webkit-user-select: none; }
   html,body{
     margin:0; padding:0; width:100%; height:100%; min-height:100vh;
     background:var(--black);
     overflow:hidden;
+    touch-action: none;
     font-family: 'Helvetica Neue', Arial, sans-serif;
   }
   #stage{
     position:fixed; inset:0; width:100vw; height:100vh; height:100dvh;
     background:var(--obsidian); overflow:hidden;
+    touch-action: none;
   }
-  canvas{ position:absolute; top:0; left:0; width:100%; height:100%; display:block; }
+  canvas{ position:absolute; top:0; left:0; width:100%; height:100%; display:block; touch-action: none; }
 
   #overlay{ position:absolute; inset:0; pointer-events:none; }
 
@@ -245,12 +249,12 @@
   };
 
   // ---------------------------------------------------------------
-  // CANVAS SETUP & RESPONSIVE SCALING
+  // CANVAS SETUP & LOCKED 3D RENDERING ZOOM
   // ---------------------------------------------------------------
   const canvas = document.getElementById('c');
   const ctx = canvas.getContext('2d');
   let W = 0, H = 0, DPR = Math.min(window.devicePixelRatio || 1, 2);
-  let S = 1; // dynamic scale factor relative to reference 1366x768
+  const S = 1; // Locked zoom level for 3D rendering
 
   function resize(){
     W = window.innerWidth || document.documentElement.clientWidth || canvas.clientWidth;
@@ -260,12 +264,14 @@
     canvas.style.width = W + 'px';
     canvas.style.height = H + 'px';
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    // Dynamically scale elements so the entire canvas area is utilized and scenes are big and bold
-    S = Math.min(W / 1050, H / 620);
-    S = Math.max(1.1, Math.min(2.4, S));
   }
   window.addEventListener('resize', resize);
   window.addEventListener('orientationchange', () => setTimeout(resize, 150));
+  // Prevent any wheel or gesture-based zooming on the 3D scene
+  window.addEventListener('wheel', (e) => { if (e.ctrlKey || Math.abs(e.deltaY) > 0) e.preventDefault(); }, { passive: false });
+  window.addEventListener('gesturestart', (e) => e.preventDefault());
+  window.addEventListener('gesturechange', (e) => e.preventDefault());
+  window.addEventListener('gestureend', (e) => e.preventDefault());
   resize();
 
   // ---------------------------------------------------------------
