@@ -43,6 +43,10 @@ export default function IsometricHospitalGrid({ isAnomaly = false }) {
         ui_stop: 0,
         ui_ar: 0,
         ui_fadeout: 0,
+        ui_hint: 0,
+        ui_loading: 0,
+        ui_general_controls: 0,
+        ui_animations: 0,
         success: (api) => {
           stateRef.current.api = api;
           api.start();
@@ -205,8 +209,8 @@ export default function IsometricHospitalGrid({ isAnomaly = false }) {
           allowFullScreen
           className="w-full absolute inset-x-0 border-0 outline-none transform scale-100 origin-center pointer-events-none"
           style={{
-            top: '-52px', // Pushes creator/title header completely out of view
-            height: 'calc(100% + 106px)', // Extends iframe so model stays centered
+            top: '-160px', // Pushes creator/title header completely out of view
+            height: 'calc(100% + 320px)', // Extends iframe symmetrically so hint is pushed well below container while keeping model perfectly centered
             background: 'transparent',
           }}
         />
