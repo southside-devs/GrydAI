@@ -30,14 +30,6 @@ export default function TotalEnergyCard({ percentage = 0, currentKw = 0, limitKw
 
       <div className="relative flex items-center justify-center my-1">
         <svg viewBox="0 0 130 75" className="w-32 h-auto overflow-visible">
-          <defs>
-            <linearGradient id="speedometerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#eab308" />
-              <stop offset="70%" stopColor="#f59e0b" />
-              <stop offset="100%" stopColor="#ef4444" />
-            </linearGradient>
-          </defs>
-
           <path
             d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
             fill="none"
@@ -49,7 +41,7 @@ export default function TotalEnergyCard({ percentage = 0, currentKw = 0, limitKw
           <path
             d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
             fill="none"
-            stroke="url(#speedometerGrad)"
+            stroke="#f59e0b"
             strokeWidth="5"
             strokeDasharray={arcLength}
             strokeDashoffset={strokeOffset}

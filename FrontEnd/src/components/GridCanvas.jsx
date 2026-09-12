@@ -72,13 +72,9 @@ export default function GridCanvas() {
         }
       }
 
-      // Digital horizon glow
-      const grad = ctx.createLinearGradient(0, horizonY - 40, 0, horizonY + 40);
-      grad.addColorStop(0, 'rgba(255, 230, 0, 0)');
-      grad.addColorStop(0.5, 'rgba(255, 230, 0, 0.08)');
-      grad.addColorStop(1, 'rgba(255, 230, 0, 0)');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, horizonY - 40, width, 80);
+      // Digital horizon line
+      ctx.fillStyle = 'rgba(255, 230, 0, 0.05)';
+      ctx.fillRect(0, horizonY - 1, width, 2);
 
       // Oscillating electrical waveform in the sky/upper atmosphere
       ctx.beginPath();

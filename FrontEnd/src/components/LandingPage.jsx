@@ -89,11 +89,9 @@ export default function LandingPage({ onReplay, onReload }) {
 
   return (
     <div className="min-h-screen w-full bg-[#000000] text-slate-100 flex flex-col justify-between p-6 lg:p-10 relative overflow-hidden select-none">
-      {/* Background Cybernetic Glow & Ambient Lights */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(255,230,0,0.06),rgba(0,0,0,0))] pointer-events-none" />
+      {/* Subtle Ambient Accent Lights */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-sky-500/[0.03] blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-amber-500/[0.03] blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff04_1px,transparent_1px),linear-gradient(to_bottom,#ffffff04_1px,transparent_1px)] bg-[size:48px_48px] pointer-events-none" />
 
       {/* 1. UNIVERSAL NAVBAR (Dashboard, Analytics, Diagnostics) */}
       <Navbar

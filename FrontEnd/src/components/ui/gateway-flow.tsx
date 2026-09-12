@@ -154,7 +154,6 @@ const gatewayFlowSource = `<!DOCTYPE html>
 
     <!-- Visualization Background -->
     <div class="fixed inset-0 z-0 overflow-hidden bg-black">
-        <div class="absolute inset-0 z-0 opacity-10" style="background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.01) 0%, rgba(0, 0, 0, 0) 80%);"></div>
         <canvas id="flow-canvas" class="absolute inset-0 w-full h-full z-10"></canvas>
     </div>
 
