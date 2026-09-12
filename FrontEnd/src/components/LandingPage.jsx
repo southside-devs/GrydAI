@@ -235,7 +235,7 @@ export default function LandingPage({ onReplay, onReload }) {
       {/* 4. BOTTOM-RIGHT AUTO-DISMISSING REPORT NOTIFICATION */}
       {notification && (
         <div
-          className="fixed bottom-6 right-6 z-50 bg-[#ffe600] text-black px-4 py-3.5 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.8)] flex items-start gap-3 max-w-sm animate-in fade-in slide-in-from-bottom-5 duration-300 pointer-events-auto border border-[#ffd700]"
+          className="fixed bottom-6 right-6 z-50 bg-[#ffe600] text-black px-4 py-3.5 rounded-2xl flex items-start gap-3 max-w-sm animate-in fade-in slide-in-from-bottom-5 duration-300 pointer-events-auto border border-[#ffd700]"
         >
           <div className="w-8 h-8 rounded-xl bg-black/10 flex items-center justify-center text-black shrink-0 mt-0.5">
             <CheckCircle2 size={18} strokeWidth={2.5} />
