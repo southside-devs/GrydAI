@@ -42,6 +42,7 @@ class SerialTelemetryBridge:
     ):
         self.port = port
         self.baudrate = baudrate
+        self.user_requested_mock = is_mock
         self.is_mock = is_mock
         self.on_payload_callback = on_payload_callback
 
@@ -66,7 +67,7 @@ class SerialTelemetryBridge:
         self.is_running = True
         self.thread = threading.Thread(target=self._run_loop, daemon=True)
         self.thread.start()
-        mode_str = "MOCK SIMULATION" if self.is_mock else f"HARDWARE SERIAL ({self.port or 'AUTO'})"
+        mode_str = "MOCK SIMULATION" if self.user_requested_mock else f"HARDWARE SERIAL ({self.port or 'AUTO'})"
         logger.info(f"Telemetry Bridge started in {mode_str} mode at 10 Hz.")
 
     def stop(self):
@@ -97,18 +98,20 @@ class SerialTelemetryBridge:
         """Attempts to open the serial port."""
         target_port = self.port or self._auto_detect_port()
         if not target_port:
-            logger.warning("No COM ports found. Falling back to MOCK mode automatically.")
-            self.is_mock = True
+            if self.user_requested_mock:
+                self.is_mock = True
             return False
 
         try:
             self.serial_conn = serial.Serial(target_port, self.baudrate, timeout=1.0)
             self.port = target_port
+            self.is_mock = False
             logger.info(f"Successfully opened serial port {target_port} at {self.baudrate} baud.")
             return True
         except Exception as e:
-            logger.warning(f"Could not open serial port {target_port}: {e}. Switching to MOCK mode.")
-            self.is_mock = True
+            logger.warning(f"Could not open serial port {target_port}: {e}.")
+            if self.user_requested_mock:
+                self.is_mock = True
             return False
 
     def send_reverse_command(self, grid_status: int, anomaly_score: float):
@@ -182,11 +185,19 @@ class SerialTelemetryBridge:
 
     def _run_loop(self):
         """Main 10 Hz ingestion loop."""
-        if not self.is_mock:
+        if not self.user_requested_mock:
             self._connect_serial()
 
+        last_retry_time = 0.0
         while self.is_running:
             loop_start = time.time()
+
+            # If user wanted hardware mode but port is not open, retry every 2.0s
+            if not self.user_requested_mock and (not self.serial_conn or not self.serial_conn.is_open):
+                now = time.time()
+                if now - last_retry_time > 2.0:
+                    last_retry_time = now
+                    self._connect_serial()
 
             raw_packet = None
             if self.is_mock or not self.serial_conn or not self.serial_conn.is_open:

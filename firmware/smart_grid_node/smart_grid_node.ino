@@ -109,7 +109,14 @@ void setStatusLeds(int status) {
 // Helper: Refresh OLED Display (Decoupled 2-3 Hz)
 // ----------------------------------------------------------------------------
 void updateOledDisplay() {
-  if (!oledAvailable) return;
+  if (!oledAvailable) {
+    // Attempt auto-recovery if an I2C jumper wire was re-seated
+    if (display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
+      oledAvailable = true;
+    } else {
+      return;
+    }
+  }
 
   display.clearDisplay();
 
