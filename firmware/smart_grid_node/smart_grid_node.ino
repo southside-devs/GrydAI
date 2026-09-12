@@ -143,20 +143,44 @@ void updateOledDisplay() {
   display.setCursor(0, 16);
   display.printf("V: %5.1f V  I: %4.1f A", vApprox, iApprox);
 
-  display.setCursor(0, 27);
-  display.printf("Solar: %3.0f%%  Btn: %d", solarApprox, cachedFaultBtn);
+  // Connection check
+  bool isConnected = (millis() - lastHeartbeatTime < HEARTBEAT_TIMEOUT_MS);
 
-  // 3. Divider Line
+  // 3. Link Mode Indicator (Replaces former Solar section)
+  display.setCursor(0, 27);
+  if (isConnected) {
+    display.printf("Source: [LIVE] Btn:%d", cachedFaultBtn);
+  } else {
+    display.printf("Source: [MOCK] Btn:%d", cachedFaultBtn);
+  }
+
+  // 4. Divider Line
   display.drawFastHLine(0, 38, 128, SSD1306_WHITE);
 
-  // 4. AI Prediction Status Badge
-  bool isConnected = (millis() - lastHeartbeatTime < HEARTBEAT_TIMEOUT_MS);
+  // 5. AI Prediction Status Badge
   display.setCursor(0, 42);
 
   if (!isConnected) {
-    display.print("STATUS: [STANDALONE]");
+    // Autonomous Edge Fallback when Backend is Offline
+    int localStatus = 0;
+    if (cachedFaultBtn == HIGH || vApprox >= 245.0 || vApprox <= 195.0 || iApprox >= 23.0) {
+      localStatus = 2;
+    } else if (vApprox >= 229.0 || vApprox <= 211.0 || iApprox >= 18.5) {
+      localStatus = 1;
+    }
+    aiStatus = localStatus;
+    setStatusLeds(localStatus);
+
+    if (localStatus == 0) {
+      display.print("STATUS: [STANDALONE]");
+    } else if (localStatus == 1) {
+      display.print("STATUS: [WARN-LOCAL]");
+    } else {
+      display.print("STATUS: [CRIT-LOCAL]");
+    }
+
     display.setCursor(0, 53);
-    display.print("AI Link: CONNECTING..");
+    display.print("AI Link: OFFLINE/MOCK");
   } else {
     if (aiStatus == 0) {
       display.print("STATUS: [ NORMAL ]");
@@ -218,6 +242,10 @@ void setup() {
   pinMode(PIN_LED_YELLOW, OUTPUT);
   pinMode(PIN_LED_RED, OUTPUT);
   pinMode(PIN_BUZZER, OUTPUT);
+  
+  // Startup test chirp: Quick 100ms chirp on boot to verify buzzer wiring & acoustic level
+  digitalWrite(PIN_BUZZER, HIGH);
+  delay(100);
   digitalWrite(PIN_BUZZER, LOW);
 
   // Initial State: Green Active
@@ -308,12 +336,7 @@ void loop() {
   }
 
   // 4. Fail-Safe Offline Keepalive Check
-  if (currentMillis - lastHeartbeatTime > HEARTBEAT_TIMEOUT_MS) {
-    // Backend disconnected: Gracefully default to gentle Green state once
-    if (cachedFaultBtn == LOW && aiStatus != 0) {
-      setStatusLeds(0);
-    }
-  }
+  // When backend heartbeat is not received, updateOledDisplay() manages autonomous local status.
 
   // 5. Critical Alert Buzzer (Soft 80ms non-blocking pulse every 1000ms)
   if (aiStatus == 2 || cachedFaultBtn == HIGH) {
