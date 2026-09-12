@@ -22,6 +22,7 @@ class GridAnomalyDetector:
         # Feature Rolling Window (10 samples @ 10 Hz = 1.0 second)
         self.window_size = 10
         self.raw_history = collections.deque(maxlen=self.window_size)
+        self.status_history = collections.deque(maxlen=3)
         
         # ML Models
         self.scaler = StandardScaler()
@@ -54,16 +55,14 @@ class GridAnomalyDetector:
         dt = 0.1
         t = np.arange(0, n_samples * dt, dt)
         
-        # Generate nominal healthy telemetry at exact 10 Hz matching mock generator & hardware
-        v = 220.0 + 1.2 * np.sin(t * 0.8) + 0.6 * np.sin(t * 2.3) + np.random.normal(0, 0.2, len(t))
-        i = 15.0 + 0.4 * np.sin(t * 0.5) + np.random.normal(0, 0.1, len(t))
+        # Generate nominal healthy telemetry spanning realistic grid baseline operating conditions
+        # Voltage resting: 215V - 225V; Current resting: 11A - 18A
+        v = 220.0 + 3.0 * np.sin(t * 0.8) + 1.5 * np.sin(t * 2.3) + np.random.normal(0, 0.5, len(t))
+        i = 14.5 + 2.5 * np.sin(t * 0.5) + np.random.normal(0, 0.5, len(t))
         dv = np.diff(v, prepend=v[0])
         di = np.diff(i, prepend=i[0])
-        # Solar generation naturally varies with ambient room lighting (40% to 100%)
-        solar = 75.0 + 20.0 * np.sin(t * 0.1) + np.random.normal(0, 5.0, len(t))
-        solar = np.clip(solar, 10.0, 100.0)
         
-        features = np.column_stack([v, i, dv, di, solar])
+        features = np.column_stack([v, i, dv, di])
         self.scaler.fit(features)
         scaled = self.scaler.transform(features)
         
@@ -89,11 +88,10 @@ class GridAnomalyDetector:
             
         v = np.array([m["voltage_sim"] for m in historical_metrics])
         i = np.array([m["current_sim"] for m in historical_metrics])
-        solar = np.array([m.get("solar_efficiency", 100.0) for m in historical_metrics])
         dv = np.diff(v, prepend=v[0])
         di = np.diff(i, prepend=i[0])
         
-        features = np.column_stack([v, i, dv, di, solar])
+        features = np.column_stack([v, i, dv, di])
         self.scaler.fit(features)
         scaled = self.scaler.transform(features)
         
@@ -130,18 +128,18 @@ class GridAnomalyDetector:
             "reconstruction_mse": float
         }
         """
-        self.raw_history.append((v_sim, i_sim, solar_sim))
+        self.raw_history.append((v_sim, i_sim))
         
         # Calculate rates of change (delta per 100ms sample)
         if len(self.raw_history) >= 2:
-            prev_v, prev_i, _ = self.raw_history[-2]
+            prev_v, prev_i = self.raw_history[-2]
             dv = v_sim - prev_v
             di = i_sim - prev_i
         else:
             dv = 0.0
             di = 0.0
             
-        feat_vector = np.array([[v_sim, i_sim, dv, di, solar_sim]])
+        feat_vector = np.array([[v_sim, i_sim, dv, di]])
         scaled_vector = self.scaler.transform(feat_vector)
         
         # Autoencoder Reconstruction
@@ -160,11 +158,11 @@ class GridAnomalyDetector:
         # State Machine Evaluation
         # Physical emergency overrides:
         if fault_btn == 1:
-            grid_status = 2
+            raw_status = 2
             message = "CRITICAL: Instantaneous Line Break Triggered"
             norm_score = 1.00
         elif z_score > 3.5 or i_sim > 23.0 or v_sim < 198.0 or v_sim > 242.0:
-            grid_status = 2
+            raw_status = 2
             norm_score = max(0.75, norm_score)
             if i_sim > 23.0:
                 message = "CRITICAL: Severe Feeder Overload / EV Surge"
@@ -173,7 +171,7 @@ class GridAnomalyDetector:
             else:
                 message = "CRITICAL: High Voltage Surge & Distortion"
         elif z_score > 2.0 or i_sim > 18.5 or v_sim < 210.0 or v_sim > 230.0:
-            grid_status = 1
+            raw_status = 1
             norm_score = max(0.20, norm_score)
             if i_sim > 18.5:
                 message = "Warning: Abnormal Current Surge Detected"
@@ -182,9 +180,19 @@ class GridAnomalyDetector:
             else:
                 message = "Warning: Micro-Fluctuation Detected"
         else:
-            grid_status = 0
+            raw_status = 0
             message = "System Stable - Normal Feeder Telemetry"
             norm_score = max(-1.0, min(-0.65, norm_score))
+
+        # Debounce filter: Emergency button trips immediately; otherwise require 2-sample
+        # consensus to eliminate single-sample ADC noise jitter
+        if fault_btn == 1:
+            self.status_history.clear()
+            self.status_history.append(2)
+            grid_status = 2
+        else:
+            self.status_history.append(raw_status)
+            grid_status = collections.Counter(self.status_history).most_common(1)[0][0]
 
         return {
             "anomaly_score": round(norm_score, 3),
