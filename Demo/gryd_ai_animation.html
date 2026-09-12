@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GRYD AI // The Predictive Grid Revolution</title>
+<style>
+  :root{
+    --obsidian:#0B0D12;
+    --black:#000000;
+    --yellow:#FACC15;
+    --amber:#F59E0B;
+    --red:#EF4444;
+    --emerald:#10B981;
+    --white:#FFFFFF;
+  }
+  html,body{
+    margin:0; padding:0; width:100%; height:100%; min-height:100vh;
+    background:var(--black);
+    overflow:hidden;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+  }
+  #stage{
+    position:fixed; inset:0; width:100vw; height:100vh; height:100dvh;
+    background:var(--obsidian); overflow:hidden;
+  }
+  canvas{ position:absolute; top:0; left:0; width:100%; height:100%; display:block; }
+
+  #overlay{ position:absolute; inset:0; pointer-events:none; }
+
+  .caption{
+    position:absolute;
+    left:50%; bottom:9%;
+    transform:translateX(-50%);
+    max-width:78%;
+    text-align:center;
+    color:var(--white);
+    font-size:clamp(14px, 2.1vw, 26px);
+    font-weight:700;
+    letter-spacing:0.3px;
+    line-height:1.35;
+    text-shadow:0 0 18px rgba(250,204,21,0.25), 0 2px 10px rgba(0,0,0,0.8);
+    opacity:0;
+    transition:opacity .5s ease;
+  }
+  .caption.show{ opacity:1; }
+
+  .hud-label{
+    position:absolute;
+    color:var(--yellow);
+    font-family:'Courier New', monospace;
+    font-size:clamp(9px,1vw,13px);
+    letter-spacing:1px;
+    text-shadow:0 0 10px rgba(250,204,21,0.5);
+    opacity:0;
+    transition:opacity .4s ease;
+    white-space:nowrap;
+  }
+  .hud-label.show{ opacity:1; }
+
+  #hudTitle{ top:6%; left:6%; font-size:clamp(10px,1.1vw,14px); color:var(--white); text-shadow:0 0 12px rgba(255,255,255,0.35); }
+  #hudScope{ left:6%; bottom:26%; }
+  #hudMicro{ left:6%; bottom:32%; color:var(--amber); }
+
+  #centerReadout{
+    position:absolute; top:16%; left:50%; transform:translateX(-50%);
+    text-align:center; color:var(--white);
+    font-family:'Courier New', monospace;
+    opacity:0; transition:opacity .4s ease;
+  }
+  #centerReadout.show{ opacity:1; }
+  #centerReadout .title{ font-size:clamp(12px,1.5vw,18px); letter-spacing:3px; color:var(--yellow); text-shadow:0 0 14px rgba(250,204,21,0.6); margin-bottom:8px; }
+  #centerReadout .countdown{ font-size:clamp(36px,6.5vw,72px); font-weight:700; color:var(--white); text-shadow:0 0 26px rgba(255,255,255,0.6); }
+  #centerReadout .sub{ margin-top:8px; font-size:clamp(11px,1.2vw,15px); letter-spacing:2px; color:var(--emerald); text-shadow:0 0 12px rgba(16,185,129,0.7); }
+
+  .stepTag{
+    position:absolute;
+    font-family:'Courier New', monospace;
+    font-size:clamp(11px,1.3vw,15px);
+    font-weight:700;
+    letter-spacing:1.5px;
+    padding:8px 18px;
+    border:1px solid rgba(245,158,11,0.8);
+    border-radius:4px;
+    color:var(--amber);
+    background:rgba(11,13,18,0.85);
+    box-shadow:0 0 20px rgba(245,158,11,0.25);
+    opacity:0;
+    transition:opacity .35s ease;
+    white-space:nowrap;
+  }
+  .stepTag.show{ opacity:1; }
+
+  #kpiWrap{
+    position:absolute; top:48%; left:50%; transform:translate(-50%,-50%);
+    display:flex; gap:8vw; opacity:0; transition:opacity .6s ease;
+  }
+  #kpiWrap.show{ opacity:1; }
+  .kpi{ text-align:center; }
+  .kpi .num{
+    font-size:clamp(32px,4.5vw,64px); font-weight:800; color:var(--white);
+    text-shadow:0 0 24px rgba(16,185,129,0.55);
+    font-variant-numeric:tabular-nums;
+  }
+  .kpi .lbl{
+    margin-top:10px; font-size:clamp(11px,1.2vw,15px); color:#9db1c9;
+    letter-spacing:0.8px; font-weight:600; max-width:18ch; margin-left:auto; margin-right:auto;
+  }
+
+  #hero{
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    opacity:0; transition:opacity 1s ease;
+    background:var(--black);
+  }
+  #hero.show{ opacity:1; }
+  #hero .brand{
+    font-size:clamp(40px,8vw,96px); font-weight:800; letter-spacing:2px;
+    color:var(--white);
+    text-shadow:0 0 40px rgba(250,204,21,0.35), 0 0 90px rgba(16,185,129,0.15);
+  }
+  #hero .tag{
+    margin-top:14px; font-size:clamp(12px,1.6vw,20px); color:#c9d3e0; letter-spacing:0.5px;
+  }
+
+  #startOverlay{
+    position:absolute; inset:0; z-index:10;
+    background:radial-gradient(circle at 50% 40%, #101722 0%, #05070b 75%);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    color:var(--white); text-align:center; gap:22px;
+  }
+  #startOverlay h1{
+    font-size:clamp(24px,4vw,44px); margin:0; letter-spacing:1px; font-weight:800;
+    text-shadow:0 0 30px rgba(250,204,21,0.3);
+  }
+  #startOverlay p{ margin:0; color:#8ea0b8; font-size:clamp(11px,1.2vw,14px); max-width:520px; letter-spacing:0.3px; }
+  #playBtn{
+    font-family:'Courier New', monospace;
+    font-size:14px; letter-spacing:2px; font-weight:700;
+    color:var(--obsidian); background:var(--yellow);
+    border:none; padding:14px 30px; border-radius:3px; cursor:pointer;
+    box-shadow:0 0 30px rgba(250,204,21,0.4);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  #playBtn:hover{ transform:translateY(-2px); box-shadow:0 0 40px rgba(250,204,21,0.6); }
+  #playBtn:active{ transform:translateY(0px); }
+  #soundNote{ font-size:10px; color:#5c6b80; letter-spacing:0.5px; }
+
+  #pauseIndicator{
+    position:absolute; top:24px; right:74px; z-index:20;
+    font-family:'Courier New', monospace; font-size:12px; font-weight:700;
+    letter-spacing:2px; color:var(--yellow); background:rgba(11,13,18,0.85);
+    border:1px solid rgba(250,204,21,0.5); padding:8px 16px; border-radius:4px;
+    box-shadow:0 0 20px rgba(250,204,21,0.25);
+    display:none; align-items:center; gap:8px; pointer-events:none;
+    text-transform:uppercase; animation:pulse-pause 1.4s ease-in-out infinite alternate;
+  }
+  #pauseIndicator.show{ display:flex; }
+  @keyframes pulse-pause{
+    from{ opacity:0.8; transform:scale(0.98); }
+    to{ opacity:1; transform:scale(1.02); }
+  }
+
+  #fullscreenBtn{
+    position:absolute; top:24px; right:24px; z-index:30;
+    background:rgba(11,13,18,0.7); color:var(--yellow);
+    border:1px solid rgba(250,204,21,0.4); border-radius:4px;
+    width:36px; height:36px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:16px; transition:all .2s ease;
+    box-shadow:0 0 15px rgba(0,0,0,0.5);
+  }
+  #fullscreenBtn:hover{
+    background:rgba(250,204,21,0.15); border-color:var(--yellow);
+    box-shadow:0 0 20px rgba(250,204,21,0.3); transform:scale(1.05);
+  }
+
+  #timeline{
+    position:absolute; left:0; right:0; bottom:0; height:3px;
+    background:rgba(255,255,255,0.08);
+  }
+  #timelineFill{ height:100%; width:0%; background:linear-gradient(90deg, var(--emerald), var(--yellow)); }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <canvas id="c"></canvas>
+
+  <div id="overlay">
+    <div id="hudTitle" class="hud-label"></div>
+    <div id="hudScope" class="hud-label"></div>
+    <div id="hudMicro" class="hud-label"></div>
+
+    <div id="caption" class="caption"></div>
+
+    <div id="centerReadout">
+      <div class="title" id="crTitle">PRE-FAULT SIGNATURE IDENTIFIED</div>
+      <div class="countdown" id="crCountdown">+10:00</div>
+      <div class="sub" id="crSub">AUTONOMOUS ORCHESTRATION ENGAGED</div>
+    </div>
+
+    <div class="stepTag" id="stepTag1" style="top:32%; left:50%; transform:translateX(-50%);">STEP 1 — ISOLATING FAULTED FEEDER</div>
+    <div class="stepTag" id="stepTag2" style="top:32%; left:50%; transform:translateX(-50%);">STEP 2 — BESS + SOLAR RAMPING</div>
+    <div class="stepTag" id="stepTag3" style="top:32%; left:50%; transform:translateX(-50%);">STEP 3 — TRANSFER: 48ms // 0mV DROP</div>
+
+    <div id="kpiWrap">
+      <div class="kpi"><div class="num" id="kpi1">0</div><div class="lbl">Outage Downtime</div></div>
+      <div class="kpi"><div class="num" id="kpi2">₹0</div><div class="lbl">Downtime Losses Avoided</div></div>
+      <div class="kpi"><div class="num" id="kpi3">0.0t</div><div class="lbl">CO&#8322; Emissions Prevented</div></div>
+    </div>
+
+    <div id="hero">
+      <div class="brand">GRYD AI</div>
+      <div class="tag">Predicting grid failures before the lights go out.</div>
+    </div>
+  </div>
+
+  <div id="pauseIndicator">❚❚ PAUSED (SPACE TO RESUME)</div>
+  <button id="fullscreenBtn" title="Toggle Fullscreen (F)">⛶</button>
+
+  <div id="timeline"><div id="timelineFill"></div></div>
+
+  <div id="startOverlay">
+    <h1>GRYD AI // THE PREDICTIVE GRID REVOLUTION</h1>
+    <p>A 90-second procedural explainer. Runs full-screen at 60fps, with an optional synthesized sound layer for key story beats.</p>
+    <button id="playBtn">▶ PLAY (90s)</button>
+    <div id="soundNote">Click Play to enable sound — browsers block audio until a user gesture.</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------------------------------------------------------------
+  // PALETTE
+  // ---------------------------------------------------------------
+  const COLORS = {
+    obsidian: '#0B0D12',
+    black: '#000000',
+    yellow: '#FACC15',
+    amber: '#F59E0B',
+    red: '#EF4444',
+    emerald: '#10B981',
+    white: '#FFFFFF'
+  };
+
+  // ---------------------------------------------------------------
+  // CANVAS SETUP & RESPONSIVE SCALING
+  // ---------------------------------------------------------------
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W = 0, H = 0, DPR = Math.min(window.devicePixelRatio || 1, 2);
+  let S = 1; // dynamic scale factor relative to reference 1366x768
+
+  function resize(){
+    W = window.innerWidth || document.documentElement.clientWidth || canvas.clientWidth;
+    H = window.innerHeight || document.documentElement.clientHeight || canvas.clientHeight;
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    // Dynamically scale elements so the entire canvas area is utilized and scenes are big and bold
+    S = Math.min(W / 1050, H / 620);
+    S = Math.max(1.1, Math.min(2.4, S));
+  }
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', () => setTimeout(resize, 150));
+  resize();
+
+  // ---------------------------------------------------------------
+  // AUDIO (minimal synthesized SFX layer, gated behind user gesture)
+  // ---------------------------------------------------------------
+  let actx = null;
+  function ensureAudio(){
+    if (!actx) {
+      try { actx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch(e){ actx = null; }
+    }
+  }
+  function tone(freq, dur, type, gainPeak, delay){
+    if (!actx) return;
+    const t0 = actx.currentTime + (delay||0);
+    const osc = actx.createOscillator();
+    const gain = actx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, t0);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(gainPeak||0.15, t0 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(gain).connect(actx.destination);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.02);
+  }
+  function noiseBurst(dur, gainPeak, delay){
+    if (!actx) return;
+    const t0 = actx.currentTime + (delay||0);
+    const bufferSize = actx.sampleRate * dur;
+    const buffer = actx.createBuffer(1, bufferSize, actx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i=0;i<bufferSize;i++){ data[i] = (Math.random()*2-1) * (1 - i/bufferSize); }
+    const src = actx.createBufferSource();
+    src.buffer = buffer;
+    const gain = actx.createGain();
+    gain.gain.setValueAtTime(gainPeak||0.2, t0);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+    src.connect(gain).connect(actx.destination);
+    src.start(t0);
+  }
+  function sweep(f0, f1, dur, delay){
+    if (!actx) return;
+    const t0 = actx.currentTime + (delay||0);
+    const osc = actx.createOscillator();
+    const gain = actx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(f0, t0);
+    osc.frequency.linearRampToValueAtTime(f1, t0+dur);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.12, t0+0.05);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+    osc.connect(gain).connect(actx.destination);
+    osc.start(t0);
+    osc.stop(t0+dur+0.02);
+  }
+
+  // ---------------------------------------------------------------
+  // AUDIO CUE SCHEDULE (fired once each, keyed by trigger time in seconds)
+  // ---------------------------------------------------------------
+  const audioCues = [
+    { t: 22.0, fn: () => { tone(60, 0.6, 'sine', 0.3, 0); noiseBurst(0.4, 0.25, 0.02); } },
+    { t: 45.0, fn: () => { sweep(200, 900, 0.3, 0); } },
+    { t: 52.0, fn: () => { tone(880, 0.08, 'square', 0.08, 0); } },
+    { t: 58.0, fn: () => { tone(880, 0.08, 'square', 0.08, 0); } },
+    { t: 64.0, fn: () => { tone(1046.5, 0.15, 'sine', 0.12, 0); tone(1318.5, 0.22, 'sine', 0.12, 0.14); } },
+  ];
+  const firedCues = new Set();
+
+  // ---------------------------------------------------------------
+  // CAPTION / HUD CUE SCHEDULE
+  // ---------------------------------------------------------------
+  const captionEl = document.getElementById('caption');
+  const captionCues = [
+    { start: 22.2, end: 25.0, text: "TRADITIONAL GRIDS ARE REACTIVE. THEY TRIP AFTER THE DISASTER OCCURS." },
+    { start: 25.0, end: 28.0, text: "REWINDING TO T–10:00" },
+    { start: 28.0, end: 34.0, text: "GRYD AI EDGE GATEWAY — 115200 BAUD TELEMETRY INGEST" },
+    { start: 34.0, end: 40.0, text: "FEATURE EXTRACTION: dV/dt · THD(v) · HIGH-FREQUENCY NOISE" },
+    { start: 40.0, end: 45.0, text: "AUTOENCODER RECONSTRUCTION ERROR RISING — PATTERN UNRECOGNIZED" },
+    { start: 70.0, end: 74.0, text: "ZERO DISRUPTION. FULL CONTINUITY." },
+  ];
+
+  function updateCaption(t){
+    const cue = captionCues.find(c => t >= c.start && t < c.end);
+    if (cue){
+      if (captionEl.textContent !== cue.text) captionEl.textContent = cue.text;
+      captionEl.classList.add('show');
+    } else {
+      captionEl.classList.remove('show');
+    }
+  }
+
+  const hudTitle = document.getElementById('hudTitle');
+  const hudScope = document.getElementById('hudScope');
+  const hudMicro = document.getElementById('hudMicro');
+
+  // ---------------------------------------------------------------
+  // GEOMETRY HELPERS — isometric projection
+  // ---------------------------------------------------------------
+  const ISO_ANGLE = Math.PI / 6;
+  function isoProject(x, y, z){
+    return {
+      x: (x - y) * Math.cos(ISO_ANGLE),
+      y: (x + y) * Math.sin(ISO_ANGLE) - z
+    };
+  }
+
+  function shade(hex, amt){
+    const c = hex.replace('#','');
+    const num = parseInt(c,16);
+    let r = (num >> 16) + amt, g = ((num >> 8) & 0xff) + amt, b = (num & 0xff) + amt;
+    r = Math.max(0, Math.min(255, r));
+    g = Math.max(0, Math.min(255, g));
+    b = Math.max(0, Math.min(255, b));
+    return `rgb(${r},${g},${b})`;
+  }
+
+  // draw an isometric box at world origin (ox, oy) with size (w,d,h)
+  function drawIsoBox(ctx, ox, oy, w, d, h, baseColor, opts){
+    opts = opts || {};
+    const glow = opts.glow;
+    const alpha = opts.alpha === undefined ? 1 : opts.alpha;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    if (glow){
+      ctx.shadowColor = glow;
+      ctx.shadowBlur = opts.glowBlur || 18;
+    }
+    const p = (x,y,z) => { const iso = isoProject(x,y,z); return { x: ox+iso.x, y: oy+iso.y }; };
+
+    // top face
+    const t1=p(0,0,h), t2=p(w,0,h), t3=p(w,d,h), t4=p(0,d,h);
+    ctx.fillStyle = shade(baseColor, 35);
+    ctx.beginPath(); ctx.moveTo(t1.x,t1.y); ctx.lineTo(t2.x,t2.y); ctx.lineTo(t3.x,t3.y); ctx.lineTo(t4.x,t4.y); ctx.closePath(); ctx.fill();
+
+    // left face
+    const l1=p(0,0,0), l2=p(0,d,0), l3=p(0,d,h), l4=p(0,0,h);
+    ctx.fillStyle = shade(baseColor, -25);
+    ctx.beginPath(); ctx.moveTo(l1.x,l1.y); ctx.lineTo(l2.x,l2.y); ctx.lineTo(l3.x,l3.y); ctx.lineTo(l4.x,l4.y); ctx.closePath(); ctx.fill();
+
+    // right face
+    const r1=p(w,0,0), r2=p(w,d,0), r3=p(w,d,h), r4=p(w,0,h);
+    ctx.fillStyle = shade(baseColor, -5);
+    ctx.beginPath(); ctx.moveTo(r1.x,r1.y); ctx.lineTo(r2.x,r2.y); ctx.lineTo(r3.x,r3.y); ctx.lineTo(r4.x,r4.y); ctx.closePath(); ctx.fill();
+
+    ctx.restore();
+  }
+
+  function isoLine(ctx, ox, oy, from, to, color, width, glow){
+    ctx.save();
+    if (glow){ ctx.shadowColor = color; ctx.shadowBlur = glow; }
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width || 2;
+    const a = isoProject(from[0], from[1], from[2]);
+    const b = isoProject(to[0], to[1], to[2]);
+    ctx.beginPath();
+    ctx.moveTo(ox+a.x, oy+a.y);
+    ctx.lineTo(ox+b.x, oy+b.y);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // ---------------------------------------------------------------
+  // BACKGROUND — subtle grid + vignette (drawn every frame)
+  // ---------------------------------------------------------------
+  function drawBackground(t){
+    ctx.fillStyle = COLORS.obsidian;
+    ctx.fillRect(0,0,W,H);
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.035)';
+    ctx.lineWidth = 1;
+    const gridSize = 46;
+    const offset = (t*4) % gridSize;
+    for (let x = -gridSize; x < W+gridSize; x += gridSize){
+      ctx.beginPath(); ctx.moveTo(x+offset, 0); ctx.lineTo(x+offset, H); ctx.stroke();
+    }
+    for (let y = -gridSize; y < H+gridSize; y += gridSize){
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+    ctx.restore();
+
+    const vg = ctx.createRadialGradient(W/2,H/2, H*0.2, W/2,H/2, H*0.85);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, 'rgba(0,0,0,0.55)');
+    ctx.fillStyle = vg;
+    ctx.fillRect(0,0,W,H);
+  }
+
+  // ---------------------------------------------------------------
+  // SCOPE / WAVEFORM BUFFER
+  // ---------------------------------------------------------------
+  const scopeBuf = [];
+  const SCOPE_LEN = 240;
+  function pushScopeSample(v){
+    scopeBuf.push(v);
+    if (scopeBuf.length > SCOPE_LEN) scopeBuf.shift();
+  }
+  function drawScope(x, y, w, h, opts){
+    opts = opts || {};
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.strokeRect(x, y, w, h);
+    // threshold line
+    if (opts.showThreshold){
+      const ty = y + h*0.86;
+      ctx.setLineDash([6,5]);
+      ctx.strokeStyle = COLORS.red;
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath(); ctx.moveTo(x, ty); ctx.lineTo(x+w, ty); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    // waveform
+    ctx.beginPath();
+    ctx.strokeStyle = opts.color || COLORS.emerald;
+    ctx.shadowColor = opts.color || COLORS.emerald;
+    ctx.shadowBlur = 10;
+    ctx.lineWidth = 2;
+    for (let i=0;i<scopeBuf.length;i++){
+      const px = x + (i/SCOPE_LEN)*w;
+      const py = y + h*0.4 - scopeBuf[i]*h*0.3;
+      if (i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // ---------------------------------------------------------------
+  // SCENE 1 — THE INVISIBLE BREAKDOWN (0 - 25s)
+  // ---------------------------------------------------------------
+  let strobeOn = false;
+  function scene1(t){
+    // Center of display with balanced vertical offset
+    const cx = W*0.5, cy = H*0.48;
+    const drift = Math.sin(t*0.5) * 5;
+
+    hudTitle.textContent = 'ALIN M HOSPITAL // GRID FEED: ' + (t < 22 ? 'NOMINAL' : 'LOST');
+    hudTitle.classList.add('show');
+
+    const blackout = t >= 22;
+
+    // Substation (enlarged & spaced for balanced stage symmetry)
+    const subColor = blackout ? '#333' : COLORS.white;
+    drawIsoBox(ctx, cx-380, cy-50+drift, 50, 50, 68, '#1a2230', { glow: blackout ? null : COLORS.emerald, glowBlur: 20 });
+
+    // Conduit line from substation to hospital, pulsing heat as t -> 22
+    const heat = Math.min(1, Math.max(0, (t-12)/10));
+    const conduitColor = blackout ? '#222' : (heat > 0.6 ? COLORS.amber : COLORS.emerald);
+    if (!blackout){
+      isoLine(ctx, cx-330, cy-10+drift, [0,0,25],[140,0,25], conduitColor, 5, 20);
+      // animated flow dashes
+      ctx.save();
+      const dashOffset = -(t*90) % 24;
+      ctx.setLineDash([8,12]);
+      ctx.lineDashOffset = dashOffset;
+      ctx.strokeStyle = COLORS.yellow;
+      ctx.globalAlpha = 0.8;
+      ctx.lineWidth = 3;
+      const a = isoProject(0,0,25), b = isoProject(140,0,25);
+      ctx.beginPath();
+      ctx.moveTo(cx-330+a.x, cy-10+drift+a.y);
+      ctx.lineTo(cx-330+b.x, cy-10+drift+b.y);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Hospital complex — enlarged prominent central hero blocks
+    const hospColor = blackout ? '#14171d' : '#dce6f2';
+    drawIsoBox(ctx, cx-80, cy-30+drift, 170, 130, blackout?95:130, hospColor, { glow: blackout?null:'#8ec9ff', glowBlur: 32, alpha: blackout ? 0.9: 1 });
+    drawIsoBox(ctx, cx+40, cy+45+drift, 85, 60, blackout?55:80, blackout?'#101319':'#c7d6ea', { glow: blackout?null:'#8ec9ff', glowBlur: 18 });
+
+    // Windows (crisp glowing matrix) - only lit if not blackout
+    if (!blackout){
+      for (let i=0;i<6;i++){
+        for (let j=0;j<4;j++){
+          const wx = cx-55 + i*22;
+          const wy = cy-70+drift + j*18;
+          ctx.fillStyle = 'rgba(250,204,21,0.65)';
+          ctx.shadowColor = COLORS.yellow; ctx.shadowBlur = 8;
+          ctx.fillRect(wx, wy, 7, 10);
+        }
+      }
+      ctx.shadowBlur = 0;
+    }
+
+    // Red cross motif on hospital face
+    if (!blackout){
+      ctx.save();
+      ctx.fillStyle = COLORS.red;
+      ctx.shadowColor = COLORS.red; ctx.shadowBlur = 12;
+      ctx.globalAlpha = 0.95;
+      const crossX = cx+55, crossY = cy-95+drift;
+      ctx.fillRect(crossX-3, crossY-12, 6, 24);
+      ctx.fillRect(crossX-12, crossY-3, 24, 6);
+      ctx.restore();
+    }
+
+    // Strobe overlay after blackout
+    if (blackout){
+      strobeOn = Math.floor(t*6) % 2 === 0;
+      if (strobeOn){
+        ctx.save();
+        ctx.fillStyle = 'rgba(239,68,68,0.2)';
+        ctx.fillRect(0,0,W,H);
+        ctx.restore();
+      }
+    }
+
+    // Micro-arc / snap flash exactly at t=22
+    if (t >= 21.85 && t < 22.15){
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      ctx.fillRect(0,0,W,H);
+      ctx.restore();
+    }
+
+    // Waveform oscilloscope - prominently centered underneath
+    const freq = 2.2;
+    let v = Math.sin(t*freq*Math.PI*2) * 0.6;
+    if (t > 12 && t < 22 && Math.random() < 0.22){
+      v += (Math.random()>0.5?1:-1) * (0.5 + Math.random()*0.5);
+    }
+    if (blackout) v = 0;
+    pushScopeSample(v);
+
+    const scopeW = Math.min(W * 0.72, 820);
+    const scopeH = Math.min(H * 0.18, 140);
+    const scopeX = cx - scopeW * 0.5;
+    const scopeY = H * 0.70;
+
+    drawScope(scopeX, scopeY, scopeW, scopeH, { color: blackout ? '#333' : COLORS.emerald, showThreshold: !blackout });
+
+    hudScope.style.left = scopeX + 'px';
+    hudScope.style.top = (scopeY - 24) + 'px';
+    hudScope.textContent = 'V_RMS 230.4V // BREAKER TRIP THRESHOLD 180V';
+    hudScope.classList.toggle('show', t>=8 && t<22 && !blackout);
+
+    hudMicro.style.left = scopeX + 'px';
+    hudMicro.style.top = (scopeY + scopeH + 8) + 'px';
+    hudMicro.textContent = 'MICRO-ARCING DETECTED — HARMONIC DISTORTION SUB-THRESHOLD';
+    hudMicro.classList.toggle('show', t>=12 && t<22);
+  }
+
+  // ---------------------------------------------------------------
+  // SCENE 2 — THE GRYD AI EDGE LAYER (25 - 45s), local t 0..20
+  // ---------------------------------------------------------------
+  function scene2(t){
+    hudTitle.classList.remove('show');
+    hudScope.classList.remove('show');
+    hudMicro.classList.remove('show');
+
+    const cx = W*0.5, cy = H*0.48;
+
+    // rewind flash at start
+    if (t < 0.6){
+      ctx.save();
+      ctx.fillStyle = `rgba(255,255,255,${0.8*(1-t/0.6)})`;
+      ctx.fillRect(0,0,W,H);
+      ctx.restore();
+    }
+
+    // hospital, lit, larger backdrop on left
+    drawIsoBox(ctx, cx-340, cy-110, 130, 95, 95, '#dce6f2', { glow:'#8ec9ff', glowBlur:20, alpha:0.85 });
+
+    // ESP32 gateway chip near busbar - enlarged and centered
+    const gwX = cx-20, gwY = cy-50;
+    ctx.save();
+    ctx.fillStyle = '#161c26';
+    ctx.strokeStyle = COLORS.emerald;
+    ctx.lineWidth = 2;
+    ctx.shadowColor = COLORS.emerald; ctx.shadowBlur = 18;
+    ctx.beginPath();
+    ctx.roundRect(gwX, gwY, 110, 68, 8);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = COLORS.emerald;
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText('ESP32 EDGE', gwX+15, gwY+38);
+    // pins
+    for (let i=0;i<6;i++){
+      ctx.fillRect(gwX-8, gwY+8+i*9, 8, 4);
+      ctx.fillRect(gwX+110, gwY+8+i*9, 8, 4);
+    }
+    ctx.restore();
+
+    // data packets streaming from busbar (left) into chip
+    if (t > 1.5 && t < 9){
+      const cycle = 1.1;
+      for (let k=0;k<4;k++){
+        const pt = ((t - k*0.3) % cycle) / cycle;
+        if (pt < 0) continue;
+        const startX = cx-260, endX = gwX;
+        const x = startX + (endX-startX)*pt;
+        const y = gwY+34 + Math.sin(pt*Math.PI)*-20;
+        ctx.save();
+        ctx.fillStyle = COLORS.yellow;
+        ctx.shadowColor = COLORS.yellow; ctx.shadowBlur = 12;
+        ctx.beginPath(); ctx.arc(x, y, 4.5, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // baud label
+    if (t > 1 && t < 9){
+      drawLabel(gwX-25, gwY+95, '115200 BAUD TELEMETRY STREAM', COLORS.yellow, 12);
+    }
+
+    // feature extraction pipeline - prominent centralized cards
+    if (t > 8 && t < 15){
+      const feats = ['dV/dt (SLEW RATE)', 'THD(v) HARMONICS', 'HF TRANSIENT NOISE'];
+      const boxW = 160, boxH = 64, gap = 28;
+      const totalW = feats.length*boxW + (feats.length-1)*gap;
+      const startX = cx - totalW/2;
+      feats.forEach((f, i) => {
+        const bx = startX + i*(boxW+gap);
+        const by = cy+55;
+        const reveal = Math.min(1, Math.max(0, (t-8-i*1.6)/1.2));
+        ctx.save();
+        ctx.globalAlpha = reveal;
+        ctx.strokeStyle = COLORS.amber;
+        ctx.shadowColor = COLORS.amber; ctx.shadowBlur = 14;
+        ctx.lineWidth = 1.8;
+        ctx.fillStyle = 'rgba(16,23,34,0.85)';
+        ctx.fillRect(bx, by, boxW, boxH);
+        ctx.strokeRect(bx, by, boxW, boxH);
+        ctx.fillStyle = COLORS.white;
+        ctx.font = 'bold 10px monospace';
+        ctx.fillText(f, bx+10, by+24);
+        // mini sparkline
+        ctx.beginPath();
+        ctx.strokeStyle = COLORS.amber;
+        ctx.lineWidth = 1.6;
+        ctx.shadowBlur = 6;
+        for (let s=0;s<28;s++){
+          const sx = bx+8+s*5;
+          const sy = by+52 - Math.abs(Math.sin(s*0.7 + t*3 + i))*16;
+          if (s===0) ctx.moveTo(sx,sy); else ctx.lineTo(sx,sy);
+        }
+        ctx.stroke();
+        ctx.restore();
+      });
+    }
+
+    // autoencoder diagram - large, bold, centered
+    if (t > 14){
+      const reveal = Math.min(1, (t-14)/2);
+      ctx.save();
+      ctx.globalAlpha = reveal;
+      const netY = cy - 25;
+      const layers = [ {n:5, x: cx-200}, {n:2, x: cx-40}, {n:5, x: cx+120} ];
+      const nodePositions = layers.map(layer => {
+        const positions = [];
+        for (let i=0;i<layer.n;i++){
+          positions.push({ x: layer.x, y: netY + (i-(layer.n-1)/2)*34 });
+        }
+        return positions;
+      });
+      // connections
+      for (let li=0; li<nodePositions.length-1; li++){
+        nodePositions[li].forEach(a => {
+          nodePositions[li+1].forEach(b => {
+            ctx.strokeStyle = 'rgba(94,234,212,0.25)';
+            ctx.lineWidth = 1.2;
+            ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+          });
+        });
+      }
+      // nodes
+      nodePositions.forEach((layer, li) => {
+        layer.forEach(p => {
+          ctx.beginPath();
+          ctx.fillStyle = li===1 ? COLORS.yellow : COLORS.emerald;
+          ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 14;
+          ctx.arc(p.x, p.y, li===1?9:7, 0, Math.PI*2);
+          ctx.fill();
+        });
+      });
+      ctx.restore();
+
+      // MSE graph - enlarged and prominent
+      if (t > 16){
+        const gReveal = Math.min(1,(t-16)/4);
+        const gx = cx+180, gyBase = netY+90, gw = 180, gh = 85;
+        ctx.save();
+        ctx.fillStyle = 'rgba(11,13,18,0.85)';
+        ctx.fillRect(gx, gyBase-gh, gw, gh);
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+        ctx.strokeRect(gx, gyBase-gh, gw, gh);
+        // threshold
+        ctx.setLineDash([5,4]);
+        ctx.strokeStyle = COLORS.yellow;
+        const threshY = gyBase - gh*0.75;
+        ctx.beginPath(); ctx.moveTo(gx, threshY); ctx.lineTo(gx+gw, threshY); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.font = 'bold 10px monospace';
+        ctx.fillStyle = COLORS.yellow;
+        ctx.fillText('MSE 20.0 TRIP THRESHOLD', gx+8, threshY-6);
+        // rising MSE line
+        ctx.beginPath();
+        ctx.strokeStyle = COLORS.red;
+        ctx.shadowColor = COLORS.red; ctx.shadowBlur = 10;
+        ctx.lineWidth = 2.5;
+        const pts = 45;
+        for (let i=0;i<=pts;i++){
+          const frac = i/pts;
+          if (frac > gReveal) break;
+          const px = gx + frac*gw;
+          const val = Math.pow(frac,2.2);
+          const py = gyBase - val*gh*1.05;
+          if (i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+  }
+
+  function drawLabel(x,y,text,color,size){
+    ctx.save();
+    ctx.font = (size||10)+'px monospace';
+    ctx.fillStyle = color;
+    ctx.shadowColor = color; ctx.shadowBlur = 6;
+    ctx.fillText(text, x, y);
+    ctx.restore();
+  }
+
+  // ---------------------------------------------------------------
+  // SCENE 3 — THE PRE-EMPTION WINDOW (45 - 70s), local t 0..25
+  // ---------------------------------------------------------------
+  const centerReadout = document.getElementById('centerReadout');
+  const crCountdown = document.getElementById('crCountdown');
+  const crTitle = document.getElementById('crTitle');
+  const crSub = document.getElementById('crSub');
+  const step1 = document.getElementById('stepTag1');
+  const step2 = document.getElementById('stepTag2');
+  const step3 = document.getElementById('stepTag3');
+
+  function fmtCountdown(totalSeconds){
+    totalSeconds = Math.max(0, totalSeconds);
+    const m = Math.floor(totalSeconds/60);
+    const s = Math.floor(totalSeconds%60);
+    return '+' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  }
+
+  function scene3(t){
+    // HUD corner brackets
+    drawHudFrame();
+
+    centerReadout.classList.toggle('show', t < 7);
+    if (t < 3){
+      crTitle.textContent = 'PRE-FAULT SIGNATURE IDENTIFIED';
+      crCountdown.textContent = fmtCountdown(600);
+      crSub.textContent = 'AUTONOMOUS ORCHESTRATION ENGAGED';
+    } else if (t < 7) {
+      // countdown compresses 10:00 -> 0:00 across 3..7s (visual compression of a real 10-minute window)
+      const frac = (t-3)/4;
+      crCountdown.textContent = fmtCountdown(600*(1-frac));
+    }
+
+    const cx = W*0.5, cy = H*0.5;
+
+    step1.classList.toggle('show', t>=7 && t<13);
+    step2.classList.toggle('show', t>=13 && t<19);
+    step3.classList.toggle('show', t>=19 && t<25);
+
+    if (t >= 7 && t < 13){
+      // feeder isolation visual: line turns amber then breaks in the exact center
+      const p = Math.min(1,(t-7)/4);
+      const lineLen = Math.min(W*0.6, 680);
+      const x1 = cx - lineLen*0.5, x2 = cx + lineLen*0.5, y = cy + 20;
+      ctx.save();
+      ctx.strokeStyle = p < 0.7 ? COLORS.amber : '#3a3f47';
+      ctx.shadowColor = COLORS.amber; ctx.shadowBlur = p<0.7?18:0;
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      if (p < 0.7){
+        ctx.moveTo(x1,y); ctx.lineTo(x2,y);
+      } else {
+        const gap = (p-0.7)/0.3 * 50;
+        ctx.moveTo(x1,y); ctx.lineTo(cx - gap, y);
+        ctx.moveTo(cx + gap, y); ctx.lineTo(x2,y);
+      }
+      ctx.stroke();
+      ctx.restore();
+      if (p>=1){
+        drawLabel(cx - 36, y-20, 'FEEDER ISOLATED', COLORS.amber, 14);
+      }
+    }
+
+    if (t >= 13 && t < 19){
+      const p = Math.min(1,(t-13)/4);
+      const barW = Math.min(W * 0.45, 420), barH = 22;
+      const bx = cx - barW * 0.5, by1 = cy - 20, by2 = cy + 30;
+      drawMeter(bx, by1, barW, barH, p, COLORS.emerald, 'BESS BATTERY STORAGE RAMPING');
+      drawMeter(bx, by2, barW, barH, Math.max(0,p-0.15), COLORS.emerald, 'SOLAR PV GENERATION RAMPING');
+    }
+
+    if (t >= 19 && t < 25){
+      const p = Math.min(1,(t-19)/1.2);
+      const bw = Math.min(W*0.48, 440), bh = 18;
+      const bx = cx - bw*0.5, by = cy + 20;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.strokeRect(bx,by,bw,bh);
+      ctx.fillStyle = COLORS.emerald;
+      ctx.shadowColor = COLORS.emerald; ctx.shadowBlur = 16;
+      ctx.fillRect(bx,by,bw*p,bh);
+      ctx.restore();
+      drawLabel(bx+bw+16, by+14, '48ms TRANSFER', COLORS.white, 14);
+
+      // split visual
+      const splitP = Math.min(1,(t-20)/4);
+      if (splitP > 0){
+        const midX = cx;
+        // left: ruptured line, dark
+        ctx.save();
+        ctx.globalAlpha = splitP;
+        ctx.strokeStyle = '#444';
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(midX-60-splitP*80, H*0.72); ctx.lineTo(midX-160-splitP*80, H*0.72); ctx.stroke();
+        // spark
+        if (Math.random()<0.35){
+          ctx.fillStyle = COLORS.amber;
+          ctx.beginPath(); ctx.arc(midX-110-splitP*80, H*0.72, 3, 0, Math.PI*2); ctx.fill();
+        }
+        // right: hospital lit + steady scope
+        drawIsoBox(ctx, midX+80+splitP*50, H*0.64, 110, 80, 80, '#dce6f2', { glow:'#8ec9ff', glowBlur:22 });
+        pushScopeSample(Math.sin(t*8)*0.5);
+        drawScope(midX+50, H*0.80, 240, 56, { color: COLORS.emerald });
+        ctx.restore();
+      }
+    }
+  }
+
+  function drawMeter(x,y,w,h,p,color,label){
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.strokeRect(x,y,w,h);
+    ctx.fillStyle = color;
+    ctx.shadowColor = color; ctx.shadowBlur = 10;
+    ctx.fillRect(x,y,w*Math.min(1,p),h);
+    ctx.restore();
+    drawLabel(x, y-4, label, color, 9);
+  }
+
+  function drawHudFrame(){
+    ctx.save();
+    ctx.strokeStyle = 'rgba(250,204,21,0.35)';
+    ctx.lineWidth = 2;
+    const m = 26, len = 30;
+    // 4 corners
+    const corners = [[m,m],[W-m,m],[m,H-m],[W-m,H-m]];
+    corners.forEach(([cx,cy], i) => {
+      ctx.beginPath();
+      const dx = i%2===0?1:-1, dy = i<2?1:-1;
+      ctx.moveTo(cx, cy+dy*len); ctx.lineTo(cx,cy); ctx.lineTo(cx+dx*len, cy);
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
+
+  // ---------------------------------------------------------------
+  // SCENE 4 — CONCRETE IMPACT & MISSION CLOSE (70 - 90s), local t 0..20
+  // ---------------------------------------------------------------
+  const kpiWrap = document.getElementById('kpiWrap');
+  const kpi1 = document.getElementById('kpi1');
+  const kpi2 = document.getElementById('kpi2');
+  const kpi3 = document.getElementById('kpi3');
+  const heroEl = document.getElementById('hero');
+
+  function easeOutCubic(x){ return 1 - Math.pow(1-x, 3); }
+
+  function scene4(t){
+    // scene 3's HUD elements are only ever toggled inside scene3(), so once we
+    // leave scene 3 we must explicitly hide them here or their last state persists.
+    centerReadout.classList.remove('show');
+    step1.classList.remove('show');
+    step2.classList.remove('show');
+    step3.classList.remove('show');
+
+    const cx = W*0.5, cy = H*0.48;
+    const pull = Math.min(1, t/4);
+    const scale = 1 - pull*0.28;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
+    ctx.translate(-cx, -cy);
+    drawIsoBox(ctx, cx-110, cy-40, 220, 160, 160, '#dce6f2', { glow:'#8ec9ff', glowBlur:38 });
+    drawIsoBox(ctx, cx+40, cy+70, 110, 75, 95, '#c7d6ea', { glow:'#8ec9ff', glowBlur:22 });
+    ctx.restore();
+
+    kpiWrap.classList.toggle('show', t>=4 && t<14);
+    if (t>=4 && t<14){
+      const p1 = Math.min(1, Math.max(0, (t-4)/2));
+      const p2 = Math.min(1, Math.max(0, (t-5)/2.5));
+      const p3 = Math.min(1, Math.max(0, (t-6)/2.5));
+      kpi1.textContent = '0s';
+      kpi2.textContent = '₹' + Math.floor(easeOutCubic(p2)*1164400).toLocaleString('en-IN');
+      kpi3.textContent = (easeOutCubic(p3)*2.4).toFixed(1) + 't';
+    }
+
+    heroEl.classList.toggle('show', t>=14);
+  }
+
+  // ---------------------------------------------------------------
+  // MASTER LOOP
+  // ---------------------------------------------------------------
+  const SCENE_BOUNDS = [0, 25, 45, 70, 90];
+  let startTime = null;
+  let running = false;
+  let paused = false;
+  let pauseTime = 0;
+  let totalPausedDuration = 0;
+  const timelineFill = document.getElementById('timelineFill');
+  const pauseIndicator = document.getElementById('pauseIndicator');
+
+  function resetOverlays(){
+    captionEl.classList.remove('show');
+    hudTitle.classList.remove('show');
+    hudScope.classList.remove('show');
+    hudMicro.classList.remove('show');
+    centerReadout.classList.remove('show');
+    step1.classList.remove('show');
+    step2.classList.remove('show');
+    step3.classList.remove('show');
+    kpiWrap.classList.remove('show');
+    heroEl.classList.remove('show');
+    if (pauseIndicator) pauseIndicator.classList.remove('show');
+    scopeBuf.length = 0;
+    firedCues.clear();
+    totalPausedDuration = 0;
+    paused = false;
+  }
+
+  function togglePause(){
+    if (!running) return;
+    if (!paused) {
+      paused = true;
+      pauseTime = performance.now();
+      if (pauseIndicator) pauseIndicator.classList.add('show');
+      if (actx && actx.state === 'running') actx.suspend();
+    } else {
+      paused = false;
+      totalPausedDuration += (performance.now() - pauseTime);
+      if (pauseIndicator) pauseIndicator.classList.remove('show');
+      if (actx && actx.state === 'suspended') actx.resume();
+      requestAnimationFrame(frame);
+    }
+  }
+
+  function frame(now){
+    if (!running || paused) return;
+    const elapsed = (now - startTime - totalPausedDuration) / 1000;
+
+    if (elapsed >= 90){
+      // hold final hero frame briefly then loop back to start screen
+      drawBackground(elapsed);
+      scene4(20);
+      timelineFill.style.width = '100%';
+      setTimeout(() => {
+        running = false;
+        paused = false;
+        resetOverlays();
+        document.getElementById('startOverlay').style.display = 'flex';
+      }, 1800);
+      return;
+    }
+
+    timelineFill.style.width = (elapsed/90*100) + '%';
+
+    audioCues.forEach(cue => {
+      if (elapsed >= cue.t && !firedCues.has(cue.t)){
+        firedCues.add(cue.t);
+        cue.fn();
+      }
+    });
+
+    drawBackground(elapsed);
+    updateCaption(elapsed);
+
+    // Apply adaptive scale from screen center so 3D objects expand to fill wide and high displays
+    ctx.save();
+    ctx.translate(W * 0.5, H * 0.5);
+    ctx.scale(S, S);
+    ctx.translate(-W * 0.5, -H * 0.5);
+
+    if (elapsed < SCENE_BOUNDS[1]){
+      scene1(elapsed);
+    } else if (elapsed < SCENE_BOUNDS[2]){
+      scene2(elapsed - SCENE_BOUNDS[1]);
+    } else if (elapsed < SCENE_BOUNDS[3]){
+      scene3(elapsed - SCENE_BOUNDS[2]);
+    } else {
+      scene4(elapsed - SCENE_BOUNDS[3]);
+    }
+
+    ctx.restore();
+
+    requestAnimationFrame(frame);
+  }
+
+  document.getElementById('playBtn').addEventListener('click', () => {
+    ensureAudio();
+    if (actx && actx.state === 'suspended') actx.resume();
+    document.getElementById('startOverlay').style.display = 'none';
+    resetOverlays();
+    running = true;
+    paused = false;
+    totalPausedDuration = 0;
+    startTime = performance.now();
+    requestAnimationFrame(frame);
+  });
+
+  function toggleFullscreen(){
+    const stage = document.getElementById('stage');
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      if (stage.requestFullscreen) {
+        stage.requestFullscreen().catch(() => {});
+      } else if (stage.webkitRequestFullscreen) {
+        stage.webkitRequestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      }
+    }
+    setTimeout(resize, 100);
+  }
+
+  document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
+
+  document.addEventListener('fullscreenchange', () => {
+    const btn = document.getElementById('fullscreenBtn');
+    if (document.fullscreenElement) {
+      btn.textContent = '✕';
+      btn.title = 'Exit Fullscreen (F)';
+    } else {
+      btn.textContent = '⛶';
+      btn.title = 'Toggle Fullscreen (F)';
+    }
+    resize();
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' || e.key === ' ') {
+      // Prevent page scrolling on spacebar press
+      e.preventDefault();
+      if (running) {
+        togglePause();
+      } else if (document.getElementById('startOverlay').style.display !== 'none') {
+        document.getElementById('playBtn').click();
+      }
+    } else if (e.key === 'f' || e.key === 'F') {
+      e.preventDefault();
+      toggleFullscreen();
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
