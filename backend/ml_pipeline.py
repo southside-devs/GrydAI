@@ -138,6 +138,10 @@ class GridAnomalyDetector:
         else:
             dv = 0.0
             di = 0.0
+
+        # Soft-clamp dv and di to avoid single-step wiper noise explosion
+        dv = float(np.clip(dv, -2.5, 2.5))
+        di = float(np.clip(di, -1.2, 1.2))
             
         feat_vector = np.array([[v_sim, i_sim, dv, di]])
         scaled_vector = self.scaler.transform(feat_vector)

@@ -256,10 +256,18 @@ void loop() {
   if (currentMillis - lastTelemetryTime >= TELEMETRY_INTERVAL_MS) {
     lastTelemetryTime = currentMillis;
 
-    // Read analog inputs
-    cachedVRaw = analogRead(PIN_VOLTAGE);
-    cachedIRaw = analogRead(PIN_CURRENT);
-    cachedSolarRaw = analogRead(PIN_SOLAR);
+    // 8-sample oversampling to suppress contact wiper bounce and ADC thermal noise
+    long vSum = 0;
+    long iSum = 0;
+    long sSum = 0;
+    for (int k = 0; k < 8; k++) {
+      vSum += analogRead(PIN_VOLTAGE);
+      iSum += analogRead(PIN_CURRENT);
+      sSum += analogRead(PIN_SOLAR);
+    }
+    cachedVRaw = vSum / 8;
+    cachedIRaw = iSum / 8;
+    cachedSolarRaw = sSum / 8;
 
     // Read catastrophic fault button (active HIGH with 390 Ohm pull-down)
     cachedFaultBtn = digitalRead(PIN_FAULT_BTN);

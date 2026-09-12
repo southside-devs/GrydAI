@@ -64,6 +64,15 @@ class SerialTelemetryBridge:
         # Rolling Buffer for calibration (keeps last 300 samples / 30 seconds)
         self.history_buffer = []
 
+        # Potentiometer Low-Pass Filter (EMA) & Slew-Rate Limiter
+        # Imparts realistic electrical transformer inertia. Prevents sudden mechanical
+        # wiper contact noise and hand capacitance from triggering artificial dv/di spikes.
+        self.smooth_v: Optional[float] = None
+        self.smooth_i: Optional[float] = None
+        self.smoothing_alpha = 0.20   # Filter inertia coefficient (0.20 = ~0.5s ramp to new target)
+        self.max_slew_v = 0.80        # Max voltage ramp rate: 0.80V per 100ms sample (8.0 V/s)
+        self.max_slew_i = 0.35        # Max current ramp rate: 0.35A per 100ms sample (3.5 A/s)
+
     def start(self):
         """Starts the background telemetry ingestion thread."""
         self.is_running = True
@@ -142,13 +151,36 @@ class SerialTelemetryBridge:
         fault_btn = raw_data.get("fault_btn", 0)
         solar_ldr = raw_data.get("solar_ldr", 4095)
 
-        # Calibration Standards:
-        # V_sim: 180.0V + (v_raw / 4095.0) * 80.0V (midpoint ~220.0V)
-        # I_sim: (i_raw / 4095.0) * 30.0A (midpoint ~15.0A)
-        # Solar: (solar_ldr / 4095.0) * 100.0%
-        v_sim = round(180.0 + (v_raw / 4095.0) * 80.0, 1)
-        i_sim = round((i_raw / 4095.0) * 30.0, 2)
+        # Raw instantaneous values from 12-bit ADC (0 - 4095)
+        raw_v = 180.0 + (v_raw / 4095.0) * 80.0
+        raw_i = (i_raw / 4095.0) * 30.0
         solar_eff = round(min(100.0, max(0.0, (solar_ldr / 4095.0) * 100.0)), 1)
+
+        # Initialize smooth filter on first startup sample
+        if self.smooth_v is None:
+            self.smooth_v = raw_v
+            self.smooth_i = raw_i
+
+        # Emergency catastrophic button press immediately bypasses smoothing for 0ms trip
+        if fault_btn == 1:
+            self.smooth_v = raw_v
+            self.smooth_i = raw_i
+        else:
+            # Low-pass filter (EMA) + Slew-Rate Limiter
+            # Glides values smoothly to simulate transformer physical inertia and
+            # completely absorbs potentiometer hand capacitance and contact wiper noise.
+            step_v = (raw_v - self.smooth_v) * self.smoothing_alpha
+            step_i = (raw_i - self.smooth_i) * self.smoothing_alpha
+
+            # Slew rate clamping (limits max delta per 100ms sample)
+            clamped_dv = max(-self.max_slew_v, min(self.max_slew_v, step_v))
+            clamped_di = max(-self.max_slew_i, min(self.max_slew_i, step_i))
+
+            self.smooth_v += clamped_dv
+            self.smooth_i += clamped_di
+
+        v_sim = round(self.smooth_v, 1)
+        i_sim = round(self.smooth_i, 2)
 
         # Store in rolling buffer for calibration
         self.history_buffer.append({
