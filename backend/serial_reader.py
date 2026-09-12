@@ -237,6 +237,11 @@ class SerialTelemetryBridge:
         # Construct Contract 2 Payload
         payload = {
             "timestamp": raw_data.get("timestamp", int(time.time())),
+            "raw": {
+                "v_raw": v_raw,
+                "i_raw": i_raw,
+                "fault_btn": fault_btn
+            },
             "metrics": {
                 "voltage_sim": v_sim,
                 "current_sim": i_sim,
