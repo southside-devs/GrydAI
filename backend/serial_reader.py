@@ -8,6 +8,8 @@ Ingests Contract 1 JSON, processes via ML pipeline, and writes Contract 3 revers
 import sys
 import json
 import time
+import math
+import random
 import logging
 import threading
 from pathlib import Path
@@ -159,6 +161,47 @@ class SerialTelemetryBridge:
 
         # Run Scikit-Learn Autoencoder & State Machine
         prediction = self.detector.process_sample(v_sim, i_sim, solar_eff, fault_btn)
+        status = prediction.get("grid_status", 0)
+        z = prediction.get("z_score", 0.0)
+
+        # Derived Microgrid Electrical Metrics (matching frontend dashboard expectations)
+        # 1. Real Active Power (kW) with ~0.95 power factor
+        current_kw = round((v_sim * i_sim * 0.95) / 1000.0, 2)
+
+        # 2. Feeder Capacity Demand (% relative to 8.0 kW neighborhood pad limit)
+        energy_percent = int(min(100, max(0, round((current_kw / 8.0) * 100))))
+
+        # 3. Grid Frequency (50.0 Hz nominal with subtle load droop & natural oscillation)
+        load_droop = max(0.0, (i_sim - 18.0) * 0.04) if i_sim > 18.0 else 0.0
+        now_t = time.time()
+        freq_osc = 0.02 * math.sin(now_t * 2.8) + random.uniform(-0.008, 0.008)
+        freq_sim = round(max(48.2, min(51.4, 50.0 - load_droop + freq_osc)), 2)
+
+        # 4. Grid Stability Index (0 - 100%, driven directly by ML reconstruction Z-score)
+        if fault_btn == 1:
+            stability = 12.5
+        elif status == 2:
+            stability = max(15.0, min(38.0, 36.0 - max(0.0, z - 3.5) * 5.0))
+        elif status == 1:
+            stability = max(48.0, min(76.0, 75.0 - max(0.0, z - 2.0) * 12.0))
+        else:
+            stability = max(89.0, min(99.6, 98.4 - max(0.0, z) * 3.5 + 0.4 * math.sin(now_t * 1.5)))
+        stability = round(stability, 1)
+
+        # 5. Dynamic 13-bar Waveform Equalizer (reacts to power magnitude & anomaly harmonic distortion)
+        base_power_ratio = min(1.0, max(0.2, current_kw / 6.0))
+        waveform = []
+        for idx in range(13):
+            center_dist = abs(idx - 6)
+            spectral_weight = max(0.28, 1.0 - (center_dist * 0.12))
+            harmonic_osc = math.sin(now_t * 4.5 + idx * 0.7) * 7.0
+            if status == 2:
+                bar_val = int(min(100, max(30, 78 + harmonic_osc + random.randint(-12, 18))))
+            elif status == 1:
+                bar_val = int(min(90, max(25, 52 * spectral_weight + harmonic_osc + random.randint(-6, 8))))
+            else:
+                bar_val = int(min(85, max(15, (base_power_ratio * 65.0 * spectral_weight) + harmonic_osc)))
+            waveform.append(bar_val)
 
         # Construct Contract 2 Payload
         payload = {
@@ -166,7 +209,13 @@ class SerialTelemetryBridge:
             "metrics": {
                 "voltage_sim": v_sim,
                 "current_sim": i_sim,
-                "solar_efficiency": solar_eff
+                "solar_efficiency": solar_eff,
+                "frequency_sim": freq_sim,
+                "frequency": freq_sim,
+                "current_kw": current_kw,
+                "energy_percent": energy_percent,
+                "stability": stability,
+                "waveform": waveform
             },
             "ai_prediction": prediction
         }
