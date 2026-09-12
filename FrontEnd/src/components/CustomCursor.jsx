@@ -155,10 +155,9 @@ export default function CustomCursor({ morphFrom, isLoaded }) {
             height: `${spark.size}px`,
             borderRadius: '50%',
             backgroundColor: '#ffe600',
-            boxShadow: '0 0 8px #ffe600',
             opacity: spark.alpha,
             pointerEvents: 'none',
-            zIndex: 99990,
+            zIndex: 1000010,
             transform: 'translate(-50%, -50%)',
           }}
         />
@@ -174,7 +173,7 @@ export default function CustomCursor({ morphFrom, isLoaded }) {
           height: `${haloSize}px`,
           transform: 'translate(-50%, -50%)',
           pointerEvents: 'none',
-          zIndex: 99998,
+          zIndex: 1000018,
           transition: 'width 0.18s cubic-bezier(0.16, 1, 0.3, 1), height 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
       >
@@ -187,9 +186,6 @@ export default function CustomCursor({ morphFrom, isLoaded }) {
             border: isHovered
               ? '1.5px solid #ffe600'
               : '1px solid rgba(255, 230, 0, 0.65)',
-            boxShadow: isHovered
-              ? '0 0 16px rgba(255, 230, 0, 0.8), inset 0 0 10px rgba(255, 230, 0, 0.4)'
-              : '0 0 10px rgba(255, 230, 0, 0.35)',
             animation: isHovered ? 'radar-sweep 2s linear infinite' : 'none',
           }}
         />
@@ -204,7 +200,6 @@ export default function CustomCursor({ morphFrom, isLoaded }) {
             height: '6px',
             backgroundColor: '#ffe600',
             transform: 'translateX(-50%)',
-            boxShadow: '0 0 4px #ffe600',
           }}
         />
         <div
@@ -216,7 +211,6 @@ export default function CustomCursor({ morphFrom, isLoaded }) {
             height: '6px',
             backgroundColor: '#ffe600',
             transform: 'translateX(-50%)',
-            boxShadow: '0 0 4px #ffe600',
           }}
         />
         <div
@@ -228,7 +222,6 @@ export default function CustomCursor({ morphFrom, isLoaded }) {
             height: '2px',
             backgroundColor: '#ffe600',
             transform: 'translateY(-50%)',
-            boxShadow: '0 0 4px #ffe600',
           }}
         />
         <div
@@ -240,7 +233,6 @@ export default function CustomCursor({ morphFrom, isLoaded }) {
             height: '2px',
             backgroundColor: '#ffe600',
             transform: 'translateY(-50%)',
-            boxShadow: '0 0 4px #ffe600',
           }}
         />
       </div>
@@ -253,20 +245,19 @@ export default function CustomCursor({ morphFrom, isLoaded }) {
           top: `${coords.y}px`,
           transform: 'translate(-50%, -50%)',
           pointerEvents: 'none',
-          zIndex: 99999,
+          zIndex: 1000020,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        {/* Glowing Lightning Core Emblem */}
+        {/* Solid Lightning Core Emblem */}
         <div
           style={{
             position: 'relative',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            filter: 'drop-shadow(0 0 6px #ffe600)',
           }}
         >
           <Zap
@@ -308,8 +299,7 @@ function ThunderEffect({ thunder }) {
         ctx.beginPath();
         ctx.strokeStyle = `rgba(255, 230, 0, ${alpha})`;
         ctx.lineWidth = bi === 0 ? 3 : 1.5;
-        ctx.shadowColor = '#ffe600';
-        ctx.shadowBlur = 20;
+        ctx.shadowBlur = 0;
         points.forEach((p, i) => {
           if (i === 0) ctx.moveTo(p.x, p.y);
           else ctx.lineTo(p.x, p.y);
@@ -335,8 +325,7 @@ function ThunderEffect({ thunder }) {
       ctx.arc(thunder.x, thunder.y, ringRadius, 0, Math.PI * 2);
       ctx.strokeStyle = `rgba(255, 230, 0, ${ringAlpha})`;
       ctx.lineWidth = 2;
-      ctx.shadowColor = '#ffe600';
-      ctx.shadowBlur = 12;
+      ctx.shadowBlur = 0;
       ctx.stroke();
       ctx.shadowBlur = 0;
 
@@ -366,7 +355,7 @@ function ThunderEffect({ thunder }) {
             inset: 0,
             backgroundColor: 'rgba(255, 230, 0, 0.12)',
             pointerEvents: 'none',
-            zIndex: 99980,
+            zIndex: 1000005,
           }}
         />
       )}
@@ -376,7 +365,7 @@ function ThunderEffect({ thunder }) {
           position: 'fixed',
           inset: 0,
           pointerEvents: 'none',
-          zIndex: 99985,
+          zIndex: 1000008,
         }}
       />
     </>

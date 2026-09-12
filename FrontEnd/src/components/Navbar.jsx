@@ -82,7 +82,7 @@ export default function Navbar({
           <img
             src="/assets/Clean BG.png"
             alt="GrydAI"
-            className="h-60 w-auto max-w-[620px] object-contain drop-shadow-[0_0_50px_rgba(255,230,0,0.9)] group-hover:scale-105 group-hover:drop-shadow-[0_0_75px_rgba(255,230,0,1)] transition-all duration-300"
+            className="h-60 w-auto max-w-[620px] object-contain group-hover:scale-105 transition-all duration-300"
           />
         </button>
       </div>
@@ -112,7 +112,7 @@ export default function Navbar({
               onClick={() => setActiveTab(tab)}
               className={`relative z-10 px-7 py-2.5 rounded-full text-base font-medium transition-colors duration-500 cursor-pointer ${
                 isActive
-                  ? 'text-white font-bold drop-shadow-[0_0_10px_rgba(255,255,255,0.6)]'
+                  ? 'text-white font-bold'
                   : 'text-[#94a3b8] hover:text-white'
               }`}
             >
@@ -153,7 +153,7 @@ export default function Navbar({
           >
             <Bell size={18} />
             {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-[#ffe600] text-[#080b11] text-[10px] font-mono font-black rounded-full flex items-center justify-center ring-2 ring-[#080b11] shadow-[0_0_8px_#ffe600]">
+              <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-[#ffe600] text-[#080b11] text-[10px] font-mono font-black rounded-full flex items-center justify-center ring-2 ring-[#080b11]">
                 {unreadCount}
               </span>
             )}

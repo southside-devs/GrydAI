@@ -58,17 +58,17 @@ a, button, [role="button"], iframe, embed {
   font-family: var(--font-display);
 }
 
-/* Glow Utilities */
+/* Non-neon Crisp Utilities */
 .glow-yellow-sm {
-  filter: drop-shadow(0 0 6px rgba(255, 230, 0, 0.6));
+  filter: none;
 }
 
 .glow-yellow-lg {
-  filter: drop-shadow(0 0 20px rgba(255, 230, 0, 0.8)) drop-shadow(0 0 45px rgba(255, 230, 0, 0.4));
+  filter: none;
 }
 
 .text-glow {
-  text-shadow: 0 0 12px rgba(255, 230, 0, 0.7), 0 0 24px rgba(255, 230, 0, 0.3);
+  text-shadow: none;
 }
 
 /* Tactical Glass Box */

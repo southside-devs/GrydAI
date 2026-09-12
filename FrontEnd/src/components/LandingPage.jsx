@@ -89,10 +89,6 @@ export default function LandingPage({ onReplay, onReload }) {
 
   return (
     <div className="min-h-screen w-full bg-[#000000] text-slate-100 flex flex-col justify-between p-6 lg:p-10 relative overflow-hidden select-none">
-      {/* Subtle Ambient Accent Lights */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-sky-500/[0.03] blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-amber-500/[0.03] blur-[120px] rounded-full pointer-events-none" />
-
       {/* 1. UNIVERSAL NAVBAR (Dashboard, Analytics, Diagnostics) */}
       <Navbar
         activeTab={activeTab}
@@ -143,7 +139,7 @@ export default function LandingPage({ onReplay, onReload }) {
             </div>
 
             <div className="lg:col-span-5 h-[380px] lg:h-[420px] flex items-center justify-center relative">
-              <IsometricHospitalGrid isAnomaly={isAnomaly} />
+              <IsometricHospitalGrid isAnomaly={isAnomaly} telemetry={telemetry} />
             </div>
 
             <div className="lg:col-span-3 flex justify-end items-start">
