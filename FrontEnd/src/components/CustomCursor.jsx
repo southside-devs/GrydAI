@@ -73,9 +73,12 @@ export default function CustomCursor({ morphFrom, isLoaded }) {
 
       const target = e.target;
       const interactive =
-        target.closest('button') ||
-        target.closest('a') ||
-        target.closest('.interactive-target');
+        target &&
+        (target.closest('button') ||
+          target.closest('a') ||
+          target.closest('[role="button"]') ||
+          target.closest('.interactive-target') ||
+          window.getComputedStyle(target).cursor === 'pointer');
       setIsHovered(!!interactive);
     };
 
@@ -98,10 +101,10 @@ export default function CustomCursor({ morphFrom, isLoaded }) {
       }, 500);
     };
 
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mousedown', onMouseDown);
-    window.addEventListener('mouseup', onMouseUp);
-    window.addEventListener('dblclick', onDblClick);
+    window.addEventListener('mousemove', onMouseMove, { passive: true });
+    window.addEventListener('mousedown', onMouseDown, { passive: true });
+    window.addEventListener('mouseup', onMouseUp, { passive: true });
+    window.addEventListener('dblclick', onDblClick, { passive: true });
 
     // Smooth animation loop for the trailing outer halo & particles
     let animId;
