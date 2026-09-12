@@ -3,5 +3,10 @@ CompileFlags:
     - "-xc++"
     - "-std=c++17"
     - "-w"
+    - "-ferror-limit=0"
+
 Diagnostics:
-  Suppress: ["*"]
+  Suppress:
+    - "fatal_too_many_errors"
+    - "pp_file_not_found"
+    - "undeclared_var_use"
