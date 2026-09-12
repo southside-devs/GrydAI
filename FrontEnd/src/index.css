@@ -36,7 +36,7 @@ html, body {
 }
 
 /* Fallback if user moves outside */
-a, button, [role="button"] {
+a, button, [role="button"], iframe, embed {
   cursor: none !important;
 }
 
@@ -108,4 +108,28 @@ a, button, [role="button"] {
 
 .animate-blink {
   animation: blink-fast 0.8s infinite;
+}
+
+/* Very subtle slow XY-plane floating orbit for 3D model canvas */
+@keyframes float-xy-plane {
+  0% {
+    transform: rotateX(0deg) rotateY(0deg) translateY(0px);
+  }
+  25% {
+    transform: rotateX(2.5deg) rotateY(2deg) translateY(-4px);
+  }
+  50% {
+    transform: rotateX(-1.5deg) rotateY(0deg) translateY(3px);
+  }
+  75% {
+    transform: rotateX(2deg) rotateY(-2deg) translateY(-2px);
+  }
+  100% {
+    transform: rotateX(0deg) rotateY(0deg) translateY(0px);
+  }
+}
+
+.animate-float-xy {
+  animation: float-xy-plane 16s ease-in-out infinite;
+  transform-style: preserve-3d;
 }

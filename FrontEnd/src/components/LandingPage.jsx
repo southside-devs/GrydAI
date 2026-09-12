@@ -222,7 +222,7 @@ export default function LandingPage({ onReplay, onReload }) {
               </div>
             </div>
 
-            <div className="lg:col-span-5 h-[340px] flex items-center justify-center relative">
+            <div className="lg:col-span-5 h-[380px] lg:h-[420px] flex items-center justify-center relative">
               <IsometricHospitalGrid isAnomaly={isAnomaly} />
             </div>
 

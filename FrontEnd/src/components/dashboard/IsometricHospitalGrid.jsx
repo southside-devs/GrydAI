@@ -1,75 +1,223 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
-export default function IsometricHospitalGrid({ isAnomaly = true }) {
+export default function IsometricHospitalGrid({ isAnomaly = false }) {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const iframeRef = useRef(null);
+  const stateRef = useRef({
+    isDragging: false,
+    startX: 0,
+    startY: 0,
+    angle: 0,
+    elevation: 0,
+    radius: 0,
+    baseAngle: 0,
+    baseElevation: 0,
+    target: [0, 0, 0],
+    api: null,
+  });
+
+  // Model ID: f91637b01dde4749aafd56ea37fa3b21
+  useEffect(() => {
+    let animFrame = null;
+
+    const initSketchfab = () => {
+      if (!window.Sketchfab || !iframeRef.current) {
+        setTimeout(initSketchfab, 250);
+        return;
+      }
+
+      const client = new window.Sketchfab(iframeRef.current);
+      client.init('f91637b01dde4749aafd56ea37fa3b21', {
+        autostart: 1,
+        preload: 1,
+        transparent: 1,
+        ui_theme: 'dark',
+        ui_infos: 0,
+        ui_controls: 0,
+        ui_watermark: 0,
+        ui_vr: 0,
+        ui_help: 0,
+        ui_settings: 0,
+        ui_inspector: 0,
+        ui_annotations: 0,
+        ui_stop: 0,
+        ui_ar: 0,
+        ui_fadeout: 0,
+        success: (api) => {
+          stateRef.current.api = api;
+          api.start();
+          api.addEventListener('viewerready', () => {
+            setIsLoaded(true);
+
+            // Fetch initial camera lookAt
+            api.getCameraLookAt((err, camera) => {
+              if (err || !camera) return;
+
+              const zoomFactor = 0.88;
+              const dx = camera.position[0] - camera.target[0];
+              const dy = camera.position[1] - camera.target[1];
+              const dz = camera.position[2] - camera.target[2];
+              const r = Math.sqrt(dx * dx + dy * dy) * zoomFactor;
+
+              stateRef.current.radius = r;
+              stateRef.current.baseAngle = Math.atan2(dy, dx);
+              stateRef.current.baseElevation = dz * zoomFactor;
+              stateRef.current.elevation = dz * zoomFactor;
+              stateRef.current.target = camera.target;
+
+              // Continuous orbital loop + user drag response
+              const loop = () => {
+                const s = stateRef.current;
+                if (!s.isDragging) {
+                  s.angle += 0.0035; // Continuous passive rotation when not dragging
+                }
+
+                const curAngle = s.baseAngle + s.angle;
+                const newX = s.target[0] + s.radius * Math.cos(curAngle);
+                const newY = s.target[1] + s.radius * Math.sin(curAngle);
+                const newZ = s.target[2] + s.elevation;
+
+                api.setCameraLookAt(
+                  [newX, newY, newZ],
+                  s.target,
+                  0,
+                  () => {}
+                );
+
+                animFrame = requestAnimationFrame(loop);
+              };
+
+              animFrame = requestAnimationFrame(loop);
+            });
+          });
+        },
+        error: () => {
+          setIsLoaded(true);
+        },
+      });
+    };
+
+    initSketchfab();
+
+    return () => {
+      if (animFrame) cancelAnimationFrame(animFrame);
+    };
+  }, []);
+
+  // Handle Drag / Orbit Interaction while keeping custom cursor active
+  const handlePointerDown = (e) => {
+    stateRef.current.isDragging = true;
+    stateRef.current.startX = e.clientX;
+    stateRef.current.startY = e.clientY;
+
+    window.dispatchEvent(
+      new MouseEvent('mousedown', {
+        clientX: e.clientX,
+        clientY: e.clientY,
+        bubbles: true,
+      })
+    );
+  };
+
+  const handlePointerMove = (e) => {
+    // Keep custom cursor locked to pointer
+    window.dispatchEvent(
+      new MouseEvent('mousemove', {
+        clientX: e.clientX,
+        clientY: e.clientY,
+        bubbles: true,
+      })
+    );
+
+    const s = stateRef.current;
+    if (s.isDragging) {
+      const deltaX = e.clientX - s.startX;
+      const deltaY = e.clientY - s.startY;
+      s.startX = e.clientX;
+      s.startY = e.clientY;
+
+      // Orbit horizontal rotation with drag
+      s.angle -= deltaX * 0.008;
+      // Orbit pitch / elevation with vertical drag
+      s.elevation = Math.max(
+        s.baseElevation * 0.3,
+        Math.min(s.baseElevation * 2.5, s.elevation + deltaY * 0.25)
+      );
+    }
+  };
+
+  const handlePointerUp = (e) => {
+    stateRef.current.isDragging = false;
+    window.dispatchEvent(
+      new MouseEvent('mouseup', {
+        clientX: e.clientX,
+        clientY: e.clientY,
+        bubbles: true,
+      })
+    );
+  };
+
+  // Pinch / Scroll to Zoom
+  const handleWheel = (e) => {
+    e.preventDefault();
+    const s = stateRef.current;
+    if (s.radius) {
+      const zoomDelta = e.deltaY * 0.05;
+      s.radius = Math.max(15, Math.min(120, s.radius + zoomDelta));
+    }
+  };
+
   return (
-    <div className="relative w-full h-full flex items-center justify-center select-none pointer-events-auto">
-      <svg viewBox="0 0 640 400" className="w-full h-full max-w-[620px] overflow-visible drop-shadow-[0_20px_40px_rgba(0,0,0,0.8)]">
-        <defs>
-          <linearGradient id="floorGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#1e2536" />
-            <stop offset="100%" stopColor="#111624" />
-          </linearGradient>
-          <linearGradient id="wallLeftGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#252f45" />
-            <stop offset="100%" stopColor="#161c2a" />
-          </linearGradient>
-          <linearGradient id="wallRightGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#1a2233" />
-            <stop offset="100%" stopColor="#0e131d" />
-          </linearGradient>
-          <linearGradient id="boxTopGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#2c3750" />
-            <stop offset="100%" stopColor="#1f273b" />
-          </linearGradient>
-        </defs>
-        <polygon points="320,80 560,200 320,320 80,200" fill="url(#floorGrad)" stroke="rgba(255, 255, 255, 0.1)" strokeWidth="1.2" />
-        <polygon points="80,200 320,320 320,332 80,212" fill="#0c1017" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" />
-        <polygon points="320,320 560,200 560,212 320,332" fill="#080b10" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" />
-        <polygon points="80,200 320,80 320,0 80,120" fill="url(#wallLeftGrad)" stroke="rgba(255, 255, 255, 0.12)" strokeWidth="1" opacity="0.9" />
-        <polygon points="120,135 180,105 180,75 120,105" fill="#111827" stroke="#38bdf8" strokeWidth="1.2" strokeDasharray="2 2" opacity="0.6" />
-        <polygon points="320,80 560,200 560,120 320,0" fill="url(#wallRightGrad)" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="1" opacity="0.9" />
-        <polygon points="320,80 430,135 430,95 320,40" fill="#1c2436" stroke="rgba(255, 255, 255, 0.1)" strokeWidth="1" />
-        <g transform="translate(310, 110)">
-          <ellipse cx="0" cy="0" rx="42" ry="21" fill="rgba(239, 68, 68, 0.08)" stroke={isAnomaly ? '#ef4444' : '#10b981'} strokeWidth="1.5" strokeDasharray="3 3" className={isAnomaly ? 'animate-pulse' : ''} />
-          <ellipse cx="0" cy="0" rx="28" ry="14" fill="rgba(239, 68, 68, 0.15)" stroke={isAnomaly ? '#ef4444' : '#10b981'} strokeWidth="1" />
-          <path d="M -3 -10 L 3 -10 L 3 -3 L 10 -3 L 10 3 L 3 3 L 3 10 L -3 10 L -3 3 L -10 3 L -10 -3 L -3 -3 Z" fill="#ef4444" stroke="#ef4444" strokeWidth="1" style={{ filter: 'drop-shadow(0 0 8px rgba(239,68,68,0.8))' }} />
-        </g>
-        <g transform="translate(100, 175)">
-          <polygon points="0,30 28,44 28,14 0,0" fill="#1e283d" stroke="rgba(255,255,255,0.15)" strokeWidth="0.8" />
-          <polygon points="28,44 56,30 56,0 28,14" fill="#141c2c" stroke="rgba(255,255,255,0.15)" strokeWidth="0.8" />
-          <polygon points="0,0 28,14 56,0 28,-14" fill="url(#boxTopGrad)" stroke="rgba(255,255,255,0.2)" strokeWidth="0.8" />
-          <circle cx="28" cy="20" r="2" fill="#ffe600" style={{ filter: 'drop-shadow(0 0 4px #ffe600)' }} />
-        </g>
-        <g transform="translate(325, 160)">
-          <polygon points="0,15 24,27 48,15 24,3" fill="#1c2538" stroke="rgba(255,255,255,0.1)" strokeWidth="0.8" />
-          <polygon points="12,10 36,22 36,2 12,-10" fill="#0f172a" stroke="#38bdf8" strokeWidth="1" />
-          <line x1="16" y1="5" x2="32" y2="13" stroke="#38bdf8" strokeWidth="1.5" opacity="0.8" />
-          <line x1="16" y1="0" x2="32" y2="8" stroke="#ffe600" strokeWidth="1" opacity="0.8" />
-        </g>
-        <g transform="translate(420, 155)">
-          <polygon points="0,40 24,52 24,2 0,-10" fill="#1a2233" stroke="rgba(255,255,255,0.12)" strokeWidth="0.8" />
-          <polygon points="24,52 48,40 48,-10 24,2" fill="#101622" stroke="rgba(255,255,255,0.12)" strokeWidth="0.8" />
-          <polygon points="0,-10 24,2 48,-10 24,-22" fill="#26334a" stroke="rgba(255,255,255,0.15)" strokeWidth="0.8" />
-          <circle cx="20" cy="12" r="1.5" fill="#10b981" />
-          <circle cx="20" cy="20" r="1.5" fill="#f59e0b" />
-          <circle cx="20" cy="28" r="1.5" fill="#3b82f6" />
-        </g>
-        <g transform="translate(400, 110)">
-          <polygon points="0,18 20,28 40,18 20,8" fill="#1c2436" stroke="rgba(255,255,255,0.1)" strokeWidth="0.8" />
-          <polygon points="0,18 20,28 20,38 0,28" fill="#141a28" stroke="rgba(255,255,255,0.1)" strokeWidth="0.8" />
-          <polygon points="20,28 40,18 40,28 20,38" fill="#0d121c" stroke="rgba(255,255,255,0.1)" strokeWidth="0.8" />
-        </g>
-        <path d="M 128 205 L 155 218 L 220 195 L 310 225 L 370 190 L 440 205" fill="none" stroke="#ffe600" strokeWidth="2.5" strokeDasharray="5 5" opacity="0.95" style={{ filter: 'drop-shadow(0 0 6px rgba(255,230,0,0.8))' }} />
-        <path d="M 310 225 L 310 195 L 340 178" fill="none" stroke="#06b6d4" strokeWidth="1.5" strokeDasharray="3 3" opacity="0.75" />
-        <circle cx="128" cy="205" r="4.5" fill="#ffe600" style={{ filter: 'drop-shadow(0 0 4px #ffe600)' }} />
-        <circle cx="128" cy="205" r="2" fill="#ffffff" />
-        <circle cx="220" cy="195" r="3.5" fill="#ffe600" />
-        <circle cx="310" cy="225" r="5" fill="#ffe600" style={{ filter: 'drop-shadow(0 0 6px #ffe600)' }} />
-        <circle cx="310" cy="225" r="2.5" fill="#ffffff" />
-        <circle cx="370" cy="190" r="4" fill="#06b6d4" style={{ filter: 'drop-shadow(0 0 6px #06b6d4)' }} />
-        <line x1="310" y1="90" x2="310" y2="70" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-        <circle cx="310" cy="70" r="3" fill="#ef4444" />
-      </svg>
+    <div className="relative w-full h-[380px] lg:h-[440px] flex items-center justify-center select-none cursor-none">
+      {/* Loading placeholder skeleton while 3D model initializes */}
+      {!isLoaded && (
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-[#94a3b8] pointer-events-none">
+          <div className="w-8 h-8 rounded-full border-2 border-[#ffe600] border-t-transparent animate-spin mb-3 shadow-[0_0_15px_#ffe600]" />
+          <span className="text-xs font-mono tracking-wider text-slate-400">
+            INITIALIZING 3D HOSPITAL TWIN...
+          </span>
+        </div>
+      )}
+
+      {/* Frame with crop offsets and transparent interactive drag surface */}
+      <div
+        className="relative w-full h-full overflow-hidden cursor-none"
+        onWheel={handleWheel}
+      >
+        {/* Full Interactive Canvas Overlay for orbit drag, zoom, and custom cursor tracking */}
+        <div
+          onMouseDown={handlePointerDown}
+          onMouseMove={handlePointerMove}
+          onMouseUp={handlePointerUp}
+          onMouseLeave={handlePointerUp}
+          onWheel={handleWheel}
+          className="absolute inset-0 z-30 cursor-none select-none touch-none"
+          style={{ cursor: 'none' }}
+        />
+
+        <iframe
+          ref={iframeRef}
+          id="sketchfab-hospital-iframe"
+          title="Hospital 3D Digital Twin"
+          src=""
+          frameBorder="0"
+          allow="autoplay; fullscreen; xr-spatial-tracking"
+          xr-spatial-tracking="true"
+          execution-while-out-of-viewport="true"
+          execution-while-not-rendered="true"
+          web-share="true"
+          allowFullScreen
+          className="w-full absolute inset-x-0 border-0 outline-none transform scale-100 origin-center pointer-events-none"
+          style={{
+            top: '-52px', // Pushes creator/title header completely out of view
+            height: 'calc(100% + 106px)', // Extends iframe so model stays centered
+            background: 'transparent',
+          }}
+        />
+
+        {/* Ambient bottom blend overlay to hide any bottom share/watermark bars */}
+        <div className="absolute bottom-0 left-0 right-0 h-14 pointer-events-none z-20 bg-gradient-to-t from-[#080b11] via-[#080b11]/80 to-transparent" />
+      </div>
     </div>
   );
 }
