@@ -1,60 +1,31 @@
-/*
- ==============================================================================
-  GRYDAI: AI-Powered Smart Grid Anomaly Monitor & Physical Node
-  Target Hardware: ESP32 Development Board (38-Pin)
-  Role: Secondary Distribution Transformer Edge Simulator (Node #TR-408)
-  Firmware Version: 1.0.0
- ==============================================================================
-
-  Pinout Configuration (ESP32 38-Pin):
-  ------------------------------------
-  * Analog Input 1 (Grid Voltage):   Pin D34 (ADC1_CH6)
-  * Analog Input 2 (Line Current):   Pin D35 (ADC1_CH7)
-  * Analog Input 3 (Solar LDR):      Pin D33 (ADC1_CH5) [Optional / Stretch]
-  * Digital Input (Catastrophic):    Pin D32 (Push-Button with 390 Ohm pull-down)
-  * Digital Output (Status Green):   Pin D25 (390 Ohm resistor to LED)
-  * Digital Output (Status Yellow):  Pin D26 (390 Ohm resistor to LED)
-  * Digital Output (Status Red):     Pin D27 (390 Ohm resistor to LED)
-  * Digital Output (Alert Buzzer):   Pin D18 (Direct to KC-1206 Buzzer)
-  * I2C Bus (SSD1306 128x64 OLED):   SDA on Pin D21, SCL on Pin D22
-
-  Protocol Contracts:
-  -------------------
-  * Outgoing (Contract 1 @ 10 Hz via Serial 115200 baud):
-    {"timestamp": 123456, "v_raw": 2048, "i_raw": 2048, "fault_btn": 0, "solar_ldr": 4095}
-  
-  * Incoming (Contract 3 Reverse Control):
-    S:<grid_status>:<anomaly_score>\n  (e.g., "S:0:-0.85\n", "S:2:0.98\n")
- ==============================================================================
-*/
-
-#include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <Wire.h>
+
 
 // ----------------------------------------------------------------------------
 // Pin Definitions
 // ----------------------------------------------------------------------------
-#define PIN_VOLTAGE     34
-#define PIN_CURRENT     35
-#define PIN_SOLAR       33
-#define PIN_FAULT_BTN   32
+#define PIN_VOLTAGE 34
+#define PIN_CURRENT 35
+#define PIN_SOLAR 33
+#define PIN_FAULT_BTN 32
 
-#define PIN_LED_GREEN   25
-#define PIN_LED_YELLOW  26
-#define PIN_LED_RED     27
-#define PIN_BUZZER      18  // KC-1206 Buzzer (1k Ohm series resistor to Pin D18)
+#define PIN_LED_GREEN 25
+#define PIN_LED_YELLOW 26
+#define PIN_LED_RED 27
+#define PIN_BUZZER 18 // KC-1206 Buzzer (1k Ohm series resistor to Pin D18)
 
-#define OLED_SDA        21
-#define OLED_SCL        22
+#define OLED_SDA 21
+#define OLED_SCL 22
 
 // ----------------------------------------------------------------------------
 // OLED Display Setup (SSD1306 128x64 I2C)
 // ----------------------------------------------------------------------------
-#define SCREEN_WIDTH    128
-#define SCREEN_HEIGHT   64
-#define OLED_RESET      -1
-#define SCREEN_ADDRESS  0x3C  // Default I2C address for 0.96" SSD1306
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET -1
+#define SCREEN_ADDRESS 0x3C // Default I2C address for 0.96" SSD1306
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 bool oledAvailable = false;
@@ -66,7 +37,8 @@ unsigned long lastTelemetryTime = 0;
 const unsigned long TELEMETRY_INTERVAL_MS = 100; // 10 Hz (100 ms)
 
 unsigned long lastOledTime = 0;
-const unsigned long OLED_INTERVAL_MS = 350;      // ~3 Hz (Decoupled to prevent I2C bus lag)
+const unsigned long OLED_INTERVAL_MS =
+    350; // ~3 Hz (Decoupled to prevent I2C bus lag)
 
 unsigned long lastHeartbeatTime = 0;
 const unsigned long HEARTBEAT_TIMEOUT_MS = 2500; // Standalone fail-safe timeout
@@ -74,8 +46,8 @@ const unsigned long HEARTBEAT_TIMEOUT_MS = 2500; // Standalone fail-safe timeout
 // ----------------------------------------------------------------------------
 // State Variables
 // ----------------------------------------------------------------------------
-int aiStatus = 0;             // 0 = Green/Stable, 1 = Yellow/Warning, 2 = Red/Critical
-float aiScore = -0.85;        // Anomaly score from backend
+int aiStatus = 0;      // 0 = Green/Stable, 1 = Yellow/Warning, 2 = Red/Critical
+float aiScore = -0.85; // Anomaly score from backend
 String incomingSerialBuffer = "";
 
 // Cached raw sensor readings
@@ -165,7 +137,8 @@ void updateOledDisplay() {
   if (!isConnected) {
     // Autonomous Edge Fallback when Backend is Offline
     int localStatus = 0;
-    if (cachedFaultBtn == HIGH || vApprox >= 245.0 || vApprox <= 195.0 || iApprox >= 23.0) {
+    if (cachedFaultBtn == HIGH || vApprox >= 245.0 || vApprox <= 195.0 ||
+        iApprox >= 23.0) {
       localStatus = 2;
     } else if (vApprox >= 229.0 || vApprox <= 211.0 || iApprox >= 18.5) {
       localStatus = 1;
@@ -244,7 +217,7 @@ void setup() {
   pinMode(PIN_LED_YELLOW, OUTPUT);
   pinMode(PIN_LED_RED, OUTPUT);
   pinMode(PIN_BUZZER, OUTPUT);
-  
+
   // Startup test chirp: Calibrated 2200 Hz tone on boot
   tone(PIN_BUZZER, 2200, 100);
   delay(130);
@@ -293,7 +266,8 @@ void loop() {
   if (currentMillis - lastTelemetryTime >= TELEMETRY_INTERVAL_MS) {
     lastTelemetryTime = currentMillis;
 
-    // 8-sample oversampling to suppress contact wiper bounce and ADC thermal noise
+    // 8-sample oversampling to suppress contact wiper bounce and ADC thermal
+    // noise
     long vSum = 0;
     long iSum = 0;
     long sSum = 0;
@@ -309,7 +283,8 @@ void loop() {
     // Read catastrophic fault button (active HIGH with 390 Ohm pull-down)
     cachedFaultBtn = digitalRead(PIN_FAULT_BTN);
 
-    // If catastrophic fault button is pressed physically, trip RED LED immediately
+    // If catastrophic fault button is pressed physically, trip RED LED
+    // immediately
     if (cachedFaultBtn == HIGH) {
       digitalWrite(PIN_LED_GREEN, LOW);
       digitalWrite(PIN_LED_YELLOW, LOW);
@@ -339,14 +314,18 @@ void loop() {
   }
 
   // 4. Fail-Safe Offline Keepalive Check
-  // When backend heartbeat is not received, updateOledDisplay() manages autonomous local status.
+  // When backend heartbeat is not received, updateOledDisplay() manages
+  // autonomous local status.
 
-  // 5. Critical Alert Buzzer: Softened 2200 Hz dual-chirp alarm pattern (-10% volume)
+  // 5. Critical Alert Buzzer: Softened 2200 Hz dual-chirp alarm pattern (-10%
+  // volume)
   if (aiStatus == 2 || cachedFaultBtn == HIGH) {
     unsigned long buzzerCycle = currentMillis % 1000;
-    // Dual-chirp pattern: 0-75ms BEEP, 75-150ms SILENCE, 150-225ms BEEP, 225-1000ms SILENCE
+    // Dual-chirp pattern: 0-75ms BEEP, 75-150ms SILENCE, 150-225ms BEEP,
+    // 225-1000ms SILENCE
     if ((buzzerCycle < 75) || (buzzerCycle >= 150 && buzzerCycle < 225)) {
-      tone(PIN_BUZZER, 2200); // 2200 Hz softens acoustic volume by ~10% vs 2400 Hz peak
+      tone(PIN_BUZZER,
+           2200); // 2200 Hz softens acoustic volume by ~10% vs 2400 Hz peak
     } else {
       noTone(PIN_BUZZER);
       digitalWrite(PIN_BUZZER, LOW);
