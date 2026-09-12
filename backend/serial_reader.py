@@ -64,14 +64,14 @@ class SerialTelemetryBridge:
         # Rolling Buffer for calibration (keeps last 300 samples / 30 seconds)
         self.history_buffer = []
 
-        # Potentiometer Low-Pass Filter (EMA) & Slew-Rate Limiter
-        # Imparts realistic electrical transformer inertia. Prevents sudden mechanical
-        # wiper contact noise and hand capacitance from triggering artificial dv/di spikes.
+        # Potentiometer Noise-Gate Deadband & Fast-Tracking Responsive Filter
+        # Eliminates idle ADC thermal/electrical jitter when the knob is sitting still.
+        # Tracks deliberate hand turns instantly with zero lag and high reactivity.
         self.smooth_v: Optional[float] = None
         self.smooth_i: Optional[float] = None
-        self.smoothing_alpha = 0.20   # Filter inertia coefficient (0.20 = ~0.5s ramp to new target)
-        self.max_slew_v = 0.80        # Max voltage ramp rate: 0.80V per 100ms sample (8.0 V/s)
-        self.max_slew_i = 0.35        # Max current ramp rate: 0.35A per 100ms sample (3.5 A/s)
+        self.noise_thresh_v = 0.25   # Minimum voltage delta to update (ignores <0.25V resting noise)
+        self.noise_thresh_i = 0.08   # Minimum current delta to update (ignores <0.08A resting noise)
+        self.tracking_alpha = 0.85   # Ultra-responsive tracking speed (0.85 = instant follow)
 
     def start(self):
         """Starts the background telemetry ingestion thread."""
@@ -158,29 +158,28 @@ class SerialTelemetryBridge:
 
         # Initialize smooth filter on first startup sample
         if self.smooth_v is None:
-            self.smooth_v = raw_v
-            self.smooth_i = raw_i
+            self.smooth_v = round(raw_v, 1)
+            self.smooth_i = round(raw_i, 2)
 
-        # Emergency catastrophic button press immediately bypasses smoothing for 0ms trip
+        # Emergency catastrophic button press immediately snaps to raw
         if fault_btn == 1:
-            self.smooth_v = raw_v
-            self.smooth_i = raw_i
+            self.smooth_v = round(raw_v, 1)
+            self.smooth_i = round(raw_i, 2)
         else:
-            # Low-pass filter (EMA) + Slew-Rate Limiter
-            # Glides values smoothly to simulate transformer physical inertia and
-            # completely absorbs potentiometer hand capacitance and contact wiper noise.
-            step_v = (raw_v - self.smooth_v) * self.smoothing_alpha
-            step_i = (raw_i - self.smooth_i) * self.smoothing_alpha
+            # 1. Voltage noise-gate deadband + responsive tracking
+            diff_v = raw_v - self.smooth_v
+            if abs(diff_v) >= self.noise_thresh_v:
+                self.smooth_v = round(self.smooth_v + diff_v * self.tracking_alpha, 1)
+            # Else: knob is resting -> freeze solid, zero drift!
 
-            # Slew rate clamping (limits max delta per 100ms sample)
-            clamped_dv = max(-self.max_slew_v, min(self.max_slew_v, step_v))
-            clamped_di = max(-self.max_slew_i, min(self.max_slew_i, step_i))
+            # 2. Current noise-gate deadband + responsive tracking
+            diff_i = raw_i - self.smooth_i
+            if abs(diff_i) >= self.noise_thresh_i:
+                self.smooth_i = round(self.smooth_i + diff_i * self.tracking_alpha, 2)
+            # Else: knob is resting -> freeze solid, zero drift!
 
-            self.smooth_v += clamped_dv
-            self.smooth_i += clamped_di
-
-        v_sim = round(self.smooth_v, 1)
-        i_sim = round(self.smooth_i, 2)
+        v_sim = self.smooth_v
+        i_sim = self.smooth_i
 
         # Store in rolling buffer for calibration
         self.history_buffer.append({
