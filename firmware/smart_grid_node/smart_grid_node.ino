@@ -15,6 +15,7 @@
   * Digital Output (Status Green):   Pin D25 (390 Ohm resistor to LED)
   * Digital Output (Status Yellow):  Pin D26 (390 Ohm resistor to LED)
   * Digital Output (Status Red):     Pin D27 (390 Ohm resistor to LED)
+  * Digital Output (Alert Buzzer):   Pin D18 (1k Ohm resistor to KC-1206 Buzzer)
   * I2C Bus (SSD1306 128x64 OLED):   SDA on Pin D21, SCL on Pin D22
 
   Protocol Contracts:
@@ -42,6 +43,7 @@
 #define PIN_LED_GREEN   25
 #define PIN_LED_YELLOW  26
 #define PIN_LED_RED     27
+#define PIN_BUZZER      18  // KC-1206 Buzzer (1k Ohm series resistor to Pin D18)
 
 #define OLED_SDA        21
 #define OLED_SCL        22
@@ -92,11 +94,13 @@ void setStatusLeds(int status) {
     digitalWrite(PIN_LED_GREEN, HIGH);
     digitalWrite(PIN_LED_YELLOW, LOW);
     digitalWrite(PIN_LED_RED, LOW);
+    digitalWrite(PIN_BUZZER, LOW);
   } else if (status == 1) {
     // Warning / Micro-Fluctuation
     digitalWrite(PIN_LED_GREEN, LOW);
     digitalWrite(PIN_LED_YELLOW, HIGH);
     digitalWrite(PIN_LED_RED, LOW);
+    digitalWrite(PIN_BUZZER, LOW);
   } else {
     // Critical / Fault / Line Break
     digitalWrite(PIN_LED_GREEN, LOW);
@@ -209,10 +213,12 @@ void setup() {
   // Configure Digital Button Input
   pinMode(PIN_FAULT_BTN, INPUT);
 
-  // Configure Status LEDs
+  // Configure Status LEDs & Alert Buzzer
   pinMode(PIN_LED_GREEN, OUTPUT);
   pinMode(PIN_LED_YELLOW, OUTPUT);
   pinMode(PIN_LED_RED, OUTPUT);
+  pinMode(PIN_BUZZER, OUTPUT);
+  digitalWrite(PIN_BUZZER, LOW);
 
   // Initial State: Green Active
   setStatusLeds(0);
@@ -307,5 +313,17 @@ void loop() {
     if (cachedFaultBtn == LOW && aiStatus != 0) {
       setStatusLeds(0);
     }
+  }
+
+  // 5. Critical Alert Buzzer (Soft 80ms non-blocking pulse every 1000ms)
+  if (aiStatus == 2 || cachedFaultBtn == HIGH) {
+    unsigned long buzzerCycle = currentMillis % 1000;
+    if (buzzerCycle < 80) {
+      digitalWrite(PIN_BUZZER, HIGH);
+    } else {
+      digitalWrite(PIN_BUZZER, LOW);
+    }
+  } else {
+    digitalWrite(PIN_BUZZER, LOW);
   }
 }
