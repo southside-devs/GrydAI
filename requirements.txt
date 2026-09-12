@@ -23,5 +23,3 @@ postcss>=8.4.0
 autoprefixer>=10.4.0
 
 # 3. FIRMWARE & EMBEDDED (ESP32 / PlatformIO / Arduino)
-adafruit/Adafruit GFX Library>=1.11.9
-adafruit/Adafruit SSD1306>=2.5.9
