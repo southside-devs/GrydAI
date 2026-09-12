@@ -16,6 +16,7 @@ export default function AnalyticsView({
     { label: 'Other', percent: 0, color: '#ea580c', strokeColor: '#ea580c' },
   ],
   incidents = [],
+  mseHistory = [],
 }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
@@ -36,14 +37,14 @@ Clearance Level: Tier-1 Alpha (Supervisor AM)
 
 METRICS SUMMARY:
 -----------------------------------------------------
-Pre-empted Outages:      ${preemptedOutages} (${preemptedDelta} this month)
+Pre-empted Outages:      ${preemptedOutages} (${preemptedDelta})
 Mean Lead Time:          +${Math.floor(leadTimeSeconds / 60)}m ${(leadTimeSeconds % 60).toString().padStart(2, '0')}s
 ML Precision:            ${mlPrecision.toFixed(1)}%
 Trip Threshold:          ${mseThreshold.toFixed(1)} MSE
 Current MSE Baseline:    ${currentMse.toFixed(2)} MSE
 Incidents Logged:        ${incidentsCount}
 
-INCIDENT CLASSIFICATIONS (30-DAY):
+INCIDENT CLASSIFICATIONS (LIVE SESSION):
 -----------------------------------------------------
 Micro-Arcing:            ${incidentCategories[0]?.percent || 0}%
 Voltage Sags:            ${incidentCategories[1]?.percent || 0}%
@@ -85,6 +86,32 @@ Other:                   ${incidentCategories[3]?.percent || 0}%
   // When currentMse is 0, signal is flat at y = 135
   const baselineY = 135;
   const peakY = currentMse > 0 ? Math.max(40, baselineY - (currentMse / (mseThreshold * 1.3)) * 95) : baselineY;
+
+  // Real-time live SVG telemetry path from actual hardware samples (no mock curve)
+  const hasHistory = mseHistory && mseHistory.length >= 2;
+  const chartPoints = hasHistory
+    ? mseHistory.map((val, idx) => {
+        const x = 30 + (idx / (mseHistory.length - 1)) * 640;
+        const y = Math.max(38, Math.min(138, baselineY - (val / (mseThreshold * 1.3)) * 95));
+        return { x, y, val };
+      })
+    : [];
+
+  const pathD = hasHistory
+    ? `M ${chartPoints.map((p) => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' L ')}`
+    : currentMse > 0
+    ? `M 30 ${baselineY} L 200 ${baselineY} Q 260 ${baselineY} 295 ${peakY + 8} Q 300 ${peakY} 305 ${peakY + 8} Q 340 ${baselineY} 400 ${baselineY} L 670 ${baselineY}`
+    : `M 30 ${baselineY} L 670 ${baselineY}`;
+
+  const areaD = hasHistory
+    ? `M 30 145 L 30 ${chartPoints[0].y.toFixed(1)} L ${chartPoints.map((p) => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' L ')} L 670 145 Z`
+    : currentMse > 0
+    ? `M 30 ${baselineY} L 200 ${baselineY} Q 260 ${baselineY} 295 ${peakY + 8} Q 300 ${peakY} 305 ${peakY + 8} Q 340 ${baselineY} 400 ${baselineY} L 670 ${baselineY} L 670 145 L 30 145 Z`
+    : '';
+
+  const activeDot = hasHistory
+    ? chartPoints[chartPoints.length - 1]
+    : { x: 300, y: peakY };
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 pb-6 text-slate-100">
@@ -135,7 +162,7 @@ Other:                   ${incidentCategories[3]?.percent || 0}%
               PRE-EMPTED OUTAGES
             </span>
             <span className="px-2 sm:px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-mono font-semibold bg-[#10b981]/15 text-[#10b981] border border-[#10b981]/30">
-              {preemptedDelta} this month
+              {preemptedDelta}
             </span>
           </div>
           <div className="my-2 sm:my-3">
@@ -199,7 +226,7 @@ Other:                   ${incidentCategories[3]?.percent || 0}%
                 Reconstruction Error (MSE)
               </h3>
               <div className="text-[11px] font-mono text-[#64748b] tracking-wider uppercase mt-0.5">
-                FEEDER-ICU-01 • 30-DAY CONTINUOUS SAMPLING
+                FEEDER-ICU-01 • REAL-TIME CONTINUOUS HARDWARE SAMPLING
               </div>
             </div>
             <span className="px-3 py-1 rounded-md text-[11px] font-mono text-[#94a3b8] bg-white/[0.04] border border-white/[0.08]">
@@ -234,9 +261,9 @@ Other:                   ${incidentCategories[3]?.percent || 0}%
               </text>
 
               {/* Area Fill under curve if spike occurs */}
-              {currentMse > 0 && (
+              {currentMse > 0 && areaD && (
                 <path
-                  d={`M 30 ${baselineY} L 200 ${baselineY} Q 260 ${baselineY} 295 ${peakY + 8} Q 300 ${peakY} 305 ${peakY + 8} Q 340 ${baselineY} 400 ${baselineY} L 670 ${baselineY} L 670 145 L 30 145 Z`}
+                  d={areaD}
                   fill="#facc15"
                   fillOpacity="0.12"
                 />
@@ -244,11 +271,7 @@ Other:                   ${incidentCategories[3]?.percent || 0}%
 
               {/* Baseline continuous signal with live peak or flat resting signal */}
               <path
-                d={
-                  currentMse > 0
-                    ? `M 30 ${baselineY} L 200 ${baselineY} Q 260 ${baselineY} 295 ${peakY + 8} Q 300 ${peakY} 305 ${peakY + 8} Q 340 ${baselineY} 400 ${baselineY} L 670 ${baselineY}`
-                    : `M 30 ${baselineY} L 670 ${baselineY}`
-                }
+                d={pathD}
                 fill="none"
                 stroke="#facc15"
                 strokeWidth="2.5"
@@ -256,25 +279,25 @@ Other:                   ${incidentCategories[3]?.percent || 0}%
                 strokeLinejoin="round"
               />
 
-              {/* Peak indicator dot with ring (only visible if spike exists) */}
+              {/* Peak/Latest indicator dot with ring (only visible if signal exists) */}
               {currentMse > 0 && (
                 <>
-                  <circle cx="300" cy={peakY} r="5" fill="#0b0e14" stroke="#facc15" strokeWidth="2" />
-                  <circle cx="300" cy={peakY} r="2" fill="#facc15" />
+                  <circle cx={activeDot.x} cy={activeDot.y} r="5" fill="#0b0e14" stroke="#facc15" strokeWidth="2" />
+                  <circle cx={activeDot.x} cy={activeDot.y} r="2" fill="#facc15" />
                 </>
               )}
             </svg>
           </div>
 
-          {/* Chart X-Axis Dates */}
+          {/* Chart X-Axis Real-Time Streaming */}
           <div className="flex items-center justify-between text-[11px] font-mono text-[#64748b] pt-2 border-t border-white/[0.05]">
-            <span>Day 01</span>
-            <span>Day 10</span>
-            <span className={currentMse > 0 ? 'text-[#facc15] font-semibold' : 'text-[#64748b]'}>
-              {currentMse > 0 ? `Spike (${currentMse.toFixed(1)})` : 'Baseline (0.0)'}
+            <span>-30s</span>
+            <span>-20s</span>
+            <span className={currentMse > 2.0 ? 'text-[#facc15] font-semibold' : 'text-[#64748b]'}>
+              {currentMse > 2.0 ? `Anomaly Peak (${currentMse.toFixed(1)} MSE)` : `Live Baseline (${currentMse.toFixed(2)} MSE)`}
             </span>
-            <span>Day 20</span>
-            <span>Day 30</span>
+            <span>-10s</span>
+            <span>Live (0s)</span>
           </div>
         </div>
 
@@ -285,7 +308,7 @@ Other:                   ${incidentCategories[3]?.percent || 0}%
               Incident Distribution
             </h3>
             <div className="text-[11px] font-mono text-[#64748b] tracking-wider uppercase mt-0.5">
-              30-DAY CLASSIFICATION
+              LIVE SESSION CLASSIFICATION
             </div>
           </div>
 
