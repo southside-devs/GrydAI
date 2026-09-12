@@ -165,11 +165,15 @@ def get_session_analytics():
     """Returns real-time session analytics computed from live edge telemetry (no mock data)."""
     if not telemetry_bridge:
         raise HTTPException(status_code=500, detail="Telemetry bridge not initialized")
+    mu = getattr(telemetry_bridge.detector, "mu_mse", 0.16)
+    sigma = getattr(telemetry_bridge.detector, "sigma_mse", 0.24)
+    adaptive_thresh = round(float(mu + 3.0 * sigma), 4)
     return {
         "preempted_outages": getattr(telemetry_bridge, "preempted_outages", 0),
         "lead_time_seconds": getattr(telemetry_bridge, "lead_time_seconds", 0),
         "ml_precision": getattr(telemetry_bridge.detector, "precision", 97.8),
-        "mse_threshold": 20.0,
+        "adaptive_threshold": adaptive_thresh,
+        "baseline_stats": {"mu": round(mu, 4), "sigma": round(sigma, 4)},
         "current_mse": round(getattr(telemetry_bridge, "latest_mse", 0.0), 4),
         "incidents": getattr(telemetry_bridge, "session_incidents", [])
     }

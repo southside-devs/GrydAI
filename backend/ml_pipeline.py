@@ -270,5 +270,10 @@ class GridAnomalyDetector:
             "message": message,
             "reconstruction_mse": round(float(raw_mse), 6),
             "z_score": round(float(effective_z), 2),
-            "precision": getattr(self, "precision", 97.8)
+            "precision": getattr(self, "precision", 97.8),
+            "adaptive_threshold": round(float(self.mu_mse + 3.0 * self.sigma_mse), 4),
+            "baseline_stats": {
+                "mu_mse": round(float(self.mu_mse), 4),
+                "sigma_mse": round(float(self.sigma_mse), 4)
+            }
         }

@@ -6,7 +6,7 @@ export default function AnalyticsView({
   preemptedDelta = '+0',
   leadTimeSeconds = 0,
   mlPrecision = 0.0,
-  mseThreshold = 20.0,
+  adaptiveThreshold = 0.89,
   currentMse = 0.0,
   incidentsCount = 0,
   incidentCategories = [
@@ -40,7 +40,7 @@ METRICS SUMMARY:
 Pre-empted Outages:      ${preemptedOutages} (${preemptedDelta})
 Mean Lead Time:          +${Math.floor(leadTimeSeconds / 60)}m ${(leadTimeSeconds % 60).toString().padStart(2, '0')}s
 ML Precision:            ${mlPrecision.toFixed(1)}%
-Trip Threshold:          ${mseThreshold.toFixed(1)} MSE
+Adaptive 3σ Limit:       ${adaptiveThreshold.toFixed(2)} MSE (Dynamic Baseline)
 Current MSE Baseline:    ${currentMse.toFixed(2)} MSE
 Incidents Logged:        ${incidentsCount}
 
@@ -82,17 +82,33 @@ Other:                   ${incidentCategories[3]?.percent || 0}%
   const seconds = leadTimeSeconds % 60;
   const formattedLeadTime = `+${minutes}m ${seconds.toString().padStart(2, '0')}s`;
 
-  // Dynamic Y position for MSE spike based on currentMse (baseline at y=135, max peak at y=40)
-  // When currentMse is 0, signal is flat at y = 135
+  // Dynamic Y position mapping for MSE signal:
+  // Baseline resting position at y = 135
+  // Adaptive 3-Sigma Anomaly Boundary at y = 68
+  // Max anomaly peak bounded at y = 36
   const baselineY = 135;
-  const peakY = currentMse > 0 ? Math.max(40, baselineY - (currentMse / (mseThreshold * 1.3)) * 95) : baselineY;
+  const thresholdY = 68;
+  const effectiveThresh = Math.max(0.2, adaptiveThreshold || 0.89);
+
+  const getYForMse = (val) => {
+    if (val <= 0) return baselineY;
+    if (val <= effectiveThresh) {
+      // Nominal resting zone: 0 to 3-sigma boundary maps from 135 to 68
+      return baselineY - (val / effectiveThresh) * (baselineY - thresholdY);
+    }
+    // Anomaly zone above 3-sigma: softly scales from 68 up to 36
+    const excess = (val - effectiveThresh) / (effectiveThresh * 4.0);
+    return Math.max(36, thresholdY - Math.min(1.0, excess) * (thresholdY - 36));
+  };
+
+  const peakY = currentMse > 0 ? getYForMse(currentMse) : baselineY;
 
   // Real-time live SVG telemetry path from actual hardware samples (no mock curve)
   const hasHistory = mseHistory && mseHistory.length >= 2;
   const chartPoints = hasHistory
     ? mseHistory.map((val, idx) => {
         const x = 30 + (idx / (mseHistory.length - 1)) * 640;
-        const y = Math.max(38, Math.min(138, baselineY - (val / (mseThreshold * 1.3)) * 95));
+        const y = getYForMse(val);
         return { x, y, val };
       })
     : [];
@@ -229,43 +245,86 @@ Other:                   ${incidentCategories[3]?.percent || 0}%
                 FEEDER-ICU-01 • REAL-TIME CONTINUOUS HARDWARE SAMPLING
               </div>
             </div>
-            <span className="px-3 py-1 rounded-md text-[11px] font-mono text-[#94a3b8] bg-white/[0.04] border border-white/[0.08]">
-              Feeder 01
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-1 rounded-md text-[10px] font-mono text-[#38bdf8] bg-[#38bdf8]/10 border border-[#38bdf8]/20 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#38bdf8] animate-pulse" />
+                ADAPTIVE STATISTICAL MANIFOLD
+              </span>
+              <span className="px-3 py-1 rounded-md text-[11px] font-mono text-[#94a3b8] bg-white/[0.04] border border-white/[0.08]">
+                Feeder 01
+              </span>
+            </div>
           </div>
 
           {/* SVG Chart */}
           <div className="relative w-full h-56 pt-2">
             <svg viewBox="0 0 700 180" className="w-full h-full overflow-visible" preserveAspectRatio="none">
-              {/* Trip Threshold Dashed Line at y = 55 (approx 20.0 MSE) */}
+              <defs>
+                {/* Subtle gradient fill for the 3-Sigma confidence envelope */}
+                <linearGradient id="confidenceBand" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.08" />
+                  <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.01" />
+                </linearGradient>
+                <linearGradient id="anomalyGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={currentMse > effectiveThresh * 2.0 ? '#ef4444' : '#f59e0b'} stopOpacity="0.25" />
+                  <stop offset="100%" stopColor={currentMse > effectiveThresh * 2.0 ? '#ef4444' : '#f59e0b'} stopOpacity="0.02" />
+                </linearGradient>
+              </defs>
+
+              {/* Shaded Normal Operating Zone (0 to 3-Sigma Confidence Envelope) */}
+              <rect
+                x="30"
+                y={thresholdY}
+                width="640"
+                height={baselineY - thresholdY}
+                fill="url(#confidenceBand)"
+                stroke="none"
+              />
+
+              {/* Adaptive 3-Sigma Statistical Confidence Boundary Line */}
               <line
                 x1="30"
-                y1="55"
+                y1={thresholdY}
                 x2="670"
-                y2="55"
-                stroke="#ef4444"
-                strokeWidth="1.2"
-                strokeDasharray="4 4"
+                y2={thresholdY}
+                stroke="#38bdf8"
+                strokeWidth="1.4"
+                strokeDasharray="5 4"
                 strokeOpacity="0.75"
               />
-              <text
-                x="500"
-                y="50"
-                fill="#ef4444"
-                fontSize="10"
-                fontFamily="'JetBrains Mono', monospace"
-                fontWeight="600"
-                opacity="0.9"
-              >
-                TRIP THRESHOLD ({mseThreshold.toFixed(1)} MSE)
-              </text>
+
+              {/* Badge & Label for Adaptive 3-Sigma Confidence Boundary */}
+              <g transform={`translate(365, ${thresholdY - 14})`}>
+                <rect
+                  x="-8"
+                  y="-9"
+                  width="312"
+                  height="19"
+                  rx="5"
+                  fill="#0b0e14"
+                  fillOpacity="0.92"
+                  stroke="rgba(56, 189, 248, 0.3)"
+                  strokeWidth="1"
+                />
+                <circle cx="3" cy="0" r="3" fill="#38bdf8" className="animate-pulse" />
+                <text
+                  x="12"
+                  y="3.5"
+                  fill="#38bdf8"
+                  fontSize="9.5"
+                  fontFamily="'JetBrains Mono', monospace"
+                  fontWeight="700"
+                  letterSpacing="0.5"
+                >
+                  ADAPTIVE 3σ BOUNDARY (μ + 3σ = {effectiveThresh.toFixed(2)} MSE)
+                </text>
+              </g>
 
               {/* Area Fill under curve if spike occurs */}
               {currentMse > 0 && areaD && (
                 <path
                   d={areaD}
-                  fill="#facc15"
-                  fillOpacity="0.12"
+                  fill="url(#anomalyGradient)"
                 />
               )}
 
@@ -273,7 +332,7 @@ Other:                   ${incidentCategories[3]?.percent || 0}%
               <path
                 d={pathD}
                 fill="none"
-                stroke="#facc15"
+                stroke={currentMse > (effectiveThresh * 2.0) ? '#ef4444' : (currentMse > effectiveThresh ? '#f59e0b' : '#ffe600')}
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -282,8 +341,20 @@ Other:                   ${incidentCategories[3]?.percent || 0}%
               {/* Peak/Latest indicator dot with ring (only visible if signal exists) */}
               {currentMse > 0 && (
                 <>
-                  <circle cx={activeDot.x} cy={activeDot.y} r="5" fill="#0b0e14" stroke="#facc15" strokeWidth="2" />
-                  <circle cx={activeDot.x} cy={activeDot.y} r="2" fill="#facc15" />
+                  <circle
+                    cx={activeDot.x}
+                    cy={activeDot.y}
+                    r="5"
+                    fill="#0b0e14"
+                    stroke={currentMse > effectiveThresh ? '#ef4444' : '#ffe600'}
+                    strokeWidth="2"
+                  />
+                  <circle
+                    cx={activeDot.x}
+                    cy={activeDot.y}
+                    r="2"
+                    fill={currentMse > effectiveThresh ? '#ef4444' : '#ffe600'}
+                  />
                 </>
               )}
             </svg>
@@ -293,8 +364,10 @@ Other:                   ${incidentCategories[3]?.percent || 0}%
           <div className="flex items-center justify-between text-[11px] font-mono text-[#64748b] pt-2 border-t border-white/[0.05]">
             <span>-30s</span>
             <span>-20s</span>
-            <span className={currentMse > 2.0 ? 'text-[#facc15] font-semibold' : 'text-[#64748b]'}>
-              {currentMse > 2.0 ? `Anomaly Peak (${currentMse.toFixed(1)} MSE)` : `Live Baseline (${currentMse.toFixed(2)} MSE)`}
+            <span className={currentMse > effectiveThresh ? 'text-[#f59e0b] font-semibold flex items-center gap-1.5' : 'text-[#64748b]'}>
+              {currentMse > effectiveThresh
+                ? `⚡ Anomaly Outlier (${currentMse.toFixed(2)} MSE > 3σ)`
+                : `✓ Latent Space Baseline (${currentMse.toFixed(2)} MSE)`}
             </span>
             <span>-10s</span>
             <span>Live (0s)</span>

@@ -38,6 +38,7 @@ export default function LandingPage({ onReplay, onReload }) {
   const [preemptedOutages, setPreemptedOutages] = useState(0);
   const [leadTimeSeconds, setLeadTimeSeconds] = useState(0);
   const [mlPrecision, setMlPrecision] = useState(0.0);
+  const [adaptiveThreshold, setAdaptiveThreshold] = useState(0.89);
   const [incidents, setIncidents] = useState([]);
 
   const warningStartTimeRef = useRef(null);
@@ -147,6 +148,7 @@ export default function LandingPage({ onReplay, onReload }) {
               const score = Number(data.ai_prediction.anomaly_score ?? -0.75);
               const mse = Number(data.ai_prediction.reconstruction_mse ?? 0.0);
               const prec = Number(data.ai_prediction.precision ?? 97.8);
+              const adaptThresh = Number(data.ai_prediction.adaptive_threshold ?? 0.0);
 
               setGridStatus(status);
               setIsAnomaly(status > 0);
@@ -154,6 +156,7 @@ export default function LandingPage({ onReplay, onReload }) {
               setAnomalyScore(score);
               setCurrentMse(mse);
               if (prec > 0) setMlPrecision(prec);
+              if (adaptThresh > 0) setAdaptiveThreshold(adaptThresh);
 
               // Maintain rolling real MSE history (no mock curve)
               setMseHistory((prev) => {
@@ -329,7 +332,7 @@ export default function LandingPage({ onReplay, onReload }) {
             preemptedDelta={`+${preemptedOutages} this session`}
             leadTimeSeconds={leadTimeSeconds}
             mlPrecision={mlPrecision}
-            mseThreshold={20.0}
+            adaptiveThreshold={adaptiveThreshold}
             currentMse={currentMse}
             mseHistory={mseHistory}
             incidentsCount={incidents.length}
