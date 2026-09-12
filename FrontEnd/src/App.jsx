@@ -25,18 +25,23 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', position: 'relative', overflow: 'hidden' }}>
-      {/* High-Tech Loading Screen with Gateway Flow & GrydAI Branding */}
+      {/* High-Tech Loading Screen with Gateway Flow & GrydAI Branding (overlay fixed on top zIndex 50000) */}
       {isLoading && <LoadingScreen onComplete={handleLoadingComplete} />}
 
       {/* Interactive Cyber-Cursor with Thunder Bolt on Double-Click */}
       <CustomCursor morphFrom={morphOrigin} isLoaded={!isLoading} />
 
-      {/* Hospital Microgrid Command Portal Landing Page */}
-      {!isLoading && (
-        <div key={landingKey} style={{ animation: 'fadeIn 0.5s ease-out forwards' }}>
-          <LandingPage onReplay={handleReplay} onReload={handleReloadLanding} />
-        </div>
-      )}
+      {/* Hospital Microgrid Command Portal Landing Page (mounted immediately behind loading screen to pre-initialize 3D render & WebSockets) */}
+      <div
+        key={landingKey}
+        style={{
+          opacity: isLoading ? 0 : 1,
+          pointerEvents: isLoading ? 'none' : 'auto',
+          transition: 'opacity 0.5s ease-out',
+        }}
+      >
+        <LandingPage onReplay={handleReplay} onReload={handleReloadLanding} />
+      </div>
     </div>
   );
 }
