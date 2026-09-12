@@ -59,7 +59,9 @@ class GridAnomalyDetector:
         i = 15.0 + 0.4 * np.sin(t * 0.5) + np.random.normal(0, 0.1, len(t))
         dv = np.diff(v, prepend=v[0])
         di = np.diff(i, prepend=i[0])
-        solar = 98.5 + np.random.normal(0, 0.3, len(t))
+        # Solar generation naturally varies with ambient room lighting (40% to 100%)
+        solar = 75.0 + 20.0 * np.sin(t * 0.1) + np.random.normal(0, 5.0, len(t))
+        solar = np.clip(solar, 10.0, 100.0)
         
         features = np.column_stack([v, i, dv, di, solar])
         self.scaler.fit(features)
