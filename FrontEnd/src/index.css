@@ -1,0 +1,111 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-core: #06080d;
+  --bg-surface: #0c1017;
+  --bg-card: rgba(18, 24, 38, 0.7);
+  --electric-yellow: #ffe600;
+  --electric-amber: #f59e0b;
+  --electric-red: #ef4444;
+  --electric-green: #10b981;
+  --electric-cyan: #06b6d4;
+  --border-subtle: rgba(255, 230, 0, 0.15);
+  --border-bright: rgba(255, 230, 0, 0.5);
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-display: 'Chakra Petch', sans-serif;
+  --font-body: 'Outfit', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100%;
+  background-color: var(--bg-core);
+  color: #f1f5f9;
+  font-family: var(--font-body);
+  overflow-x: hidden;
+  user-select: none;
+  cursor: none; /* Replaced by our custom morphing cursor */
+}
+
+/* Fallback if user moves outside */
+a, button, [role="button"] {
+  cursor: none !important;
+}
+
+
+
+
+
+/* Font classes */
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* Glow Utilities */
+.glow-yellow-sm {
+  filter: drop-shadow(0 0 6px rgba(255, 230, 0, 0.6));
+}
+
+.glow-yellow-lg {
+  filter: drop-shadow(0 0 20px rgba(255, 230, 0, 0.8)) drop-shadow(0 0 45px rgba(255, 230, 0, 0.4));
+}
+
+.text-glow {
+  text-shadow: 0 0 12px rgba(255, 230, 0, 0.7), 0 0 24px rgba(255, 230, 0, 0.3);
+}
+
+/* Tactical Glass Box */
+.glass-panel {
+  background: rgba(12, 16, 23, 0.75);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 230, 0, 0.18);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6), inset 0 0 1px 1px rgba(255, 255, 255, 0.05);
+}
+
+/* Radar Sweep Keyframes */
+@keyframes radar-sweep {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse-energy {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+    filter: drop-shadow(0 0 25px rgba(255, 230, 0, 0.9));
+  }
+}
+
+@keyframes blink-fast {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+.animate-radar {
+  animation: radar-sweep 4s linear infinite;
+}
+
+.animate-pulse-energy {
+  animation: pulse-energy 2s ease-in-out infinite;
+}
+
+.animate-blink {
+  animation: blink-fast 0.8s infinite;
+}

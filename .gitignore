@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# Node / Vite
+node_modules/
+dist/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDEs & OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db

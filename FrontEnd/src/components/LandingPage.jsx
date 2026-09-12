@@ -1,0 +1,351 @@
+import React, { useState, useEffect } from 'react';
+import { Bell, AlertTriangle, Zap, Plus, RefreshCw } from 'lucide-react';
+import TelemetryCard from './dashboard/TelemetryCard';
+import StabilityIndexCard from './dashboard/StabilityIndexCard';
+import ImpactCard from './dashboard/ImpactCard';
+import TotalEnergyCard from './dashboard/TotalEnergyCard';
+import IsometricHospitalGrid from './dashboard/IsometricHospitalGrid';
+import AIDetectionBanner from './dashboard/AIDetectionBanner';
+
+export default function LandingPage({ onReplay, onReload }) {
+  const [activeTab, setActiveTab] = useState('Dashboard');
+  const [isAnomaly, setIsAnomaly] = useState(false);
+
+  const [isConnected, setIsConnected] = useState(false);
+
+  const [telemetry, setTelemetry] = useState({
+    voltage: 0.0,
+    current: 0.0,
+    frequency: 0.0,
+    waveform: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  });
+
+  const [stability, setStability] = useState(0.0);
+  const [energyPercent, setEnergyPercent] = useState(0);
+  const [currentKw, setCurrentKw] = useState(0);
+
+  useEffect(() => {
+    let ws = null;
+    let isMounted = true;
+    let reconnectTimeout = null;
+
+    const connectWebSocket = () => {
+      try {
+        ws = new WebSocket('ws://localhost:8000/ws');
+
+        ws.onopen = () => {
+          if (isMounted) setIsConnected(true);
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data && data.metrics) {
+              setTelemetry((prev) => ({
+                ...prev,
+                voltage: Number((data.metrics.voltage_sim ?? data.metrics.voltage ?? 0).toFixed(1)),
+                current: Number((data.metrics.current_sim ?? data.metrics.current ?? 0).toFixed(1)),
+                frequency: Number((data.metrics.frequency_sim ?? data.metrics.frequency ?? 0).toFixed(1)),
+                waveform: data.metrics.waveform ?? prev.waveform,
+              }));
+              if (data.metrics.stability !== undefined) setStability(data.metrics.stability);
+              if (data.metrics.energy_percent !== undefined) setEnergyPercent(data.metrics.energy_percent);
+              if (data.metrics.current_kw !== undefined) setCurrentKw(data.metrics.current_kw);
+            }
+            if (data && data.ai_prediction) {
+              const status = data.ai_prediction.grid_status;
+              setIsAnomaly(status > 0);
+            }
+          } catch (e) {}
+        };
+
+        ws.onclose = () => {
+          if (isMounted) {
+            setIsConnected(false);
+            reconnectTimeout = setTimeout(connectWebSocket, 3000);
+          }
+        };
+
+        ws.onerror = () => {
+          if (isMounted) setIsConnected(false);
+        };
+      } catch (e) {
+        if (isMounted) {
+          setIsConnected(false);
+          reconnectTimeout = setTimeout(connectWebSocket, 3000);
+        }
+      }
+    };
+
+    connectWebSocket();
+
+    return () => {
+      isMounted = false;
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      if (ws) ws.close();
+    };
+  }, []);
+
+  return (
+    <div className="min-h-screen w-full bg-[#080b11] text-slate-100 flex flex-col justify-between p-6 lg:p-10 relative overflow-hidden select-none">
+      {/* Background Cybernetic Glow & Ambient Lights */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(255,230,0,0.08),rgba(255,255,255,0))] pointer-events-none" />
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-sky-500/[0.04] blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-amber-500/[0.04] blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:48px_48px] pointer-events-none" />
+
+      {/* 1. TOP HEADER & NAVIGATION */}
+      <header className="h-12 flex items-center justify-between z-20 mb-4 relative">
+        {/* Left: GrydAI Brand Mark (Click to reload landing page) */}
+        <div className="relative h-12 flex items-center min-w-[340px]">
+          <button
+            onClick={onReload}
+            title="GrydAI — Intelligent Microgrid Defense"
+            className="interactive-target absolute left-0 top-1/2 -translate-y-1/2 p-0 m-0 border-0 bg-transparent text-left focus:outline-none group cursor-pointer"
+          >
+            <img
+              src="/assets/Clean BG.png"
+              alt="GrydAI"
+              className="h-60 w-auto max-w-[620px] object-contain drop-shadow-[0_0_50px_rgba(255,230,0,0.9)] group-hover:scale-105 group-hover:drop-shadow-[0_0_75px_rgba(255,230,0,1)] transition-all duration-300"
+            />
+          </button>
+        </div>
+
+        {/* Navigation Tabs with Glassy Sliding Ease Indicator */}
+        <nav className="relative flex items-center bg-[#0d121c]/90 border border-white/[0.08] rounded-full p-1 shadow-lg backdrop-blur-md overflow-hidden">
+          {/* Animated Glassy Gliding Pill */}
+          <div
+            className="absolute top-1 bottom-1 rounded-full bg-gradient-to-r from-white/[0.14] via-white/[0.08] to-white/[0.04] border border-white/[0.22] backdrop-blur-2xl shadow-[0_0_20px_rgba(255,255,255,0.1),inset_0_1px_1px_rgba(255,255,255,0.25)] transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] pointer-events-none"
+            style={{
+              width: 'calc((100% - 8px) / 3)',
+              transform: `translateX(${
+                activeTab === 'Dashboard'
+                  ? '0%'
+                  : activeTab === 'Analytics'
+                  ? '100%'
+                  : '200%'
+              })`,
+            }}
+          />
+
+          {['Dashboard', 'Analytics', 'Diagnostics'].map((tab) => {
+            const isActive = activeTab === tab;
+            return (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`relative z-10 px-5 py-1.5 rounded-full text-xs font-medium transition-colors duration-500 ${
+                  isActive
+                    ? 'text-white font-semibold drop-shadow-[0_0_10px_rgba(255,255,255,0.6)]'
+                    : 'text-[#94a3b8] hover:text-white'
+                }`}
+              >
+                {tab}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="flex items-center gap-3">
+          {/* SIM / Hardware Connection Status (Live WebSocket State) */}
+          <div
+            className={`flex items-center gap-2 text-[11px] font-mono px-3.5 py-1.5 rounded-full border transition-all duration-500 cursor-default select-none backdrop-blur-md ${
+              isConnected
+                ? 'bg-[#10b981]/15 border-[#10b981]/40 text-[#10b981] shadow-[0_0_12px_rgba(16,185,129,0.2)]'
+                : 'bg-[#ef4444]/15 border-[#ef4444]/40 text-[#ef4444] shadow-[0_0_12px_rgba(239,68,68,0.2)]'
+            }`}
+          >
+            <span
+              className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                isConnected
+                  ? 'bg-[#10b981] shadow-[0_0_8px_#10b981]'
+                  : 'bg-[#ef4444] shadow-[0_0_8px_#ef4444] animate-pulse'
+              }`}
+            />
+            <span className="font-semibold tracking-wider">
+              {isConnected ? 'SIM: CONNECTED' : 'SIM: DISCONNECTED'}
+            </span>
+          </div>
+
+          <button className="w-9 h-9 rounded-full bg-[#0d121c] border border-white/[0.08] flex items-center justify-center text-[#94a3b8] hover:text-white hover:border-[#ffe600]/40 transition-colors">
+            <Bell size={15} />
+          </button>
+
+          <button className="w-9 h-9 rounded-full bg-[#0d121c] border border-white/[0.08] flex items-center justify-center text-[#94a3b8] hover:text-[#ffe600] transition-colors">
+            <AlertTriangle size={15} />
+          </button>
+
+          <div className="w-9 h-9 rounded-full bg-[#1e283d] border border-white/[0.12] flex items-center justify-center text-xs font-mono font-bold text-white shadow-inner">
+            EK
+          </div>
+        </div>
+      </header>
+
+      {/* 2. MAIN CENTER HERO & ISOMETRIC VIEW (WITH GLASSY TAB TRANSITION) */}
+      <div className="flex-1 flex flex-col justify-center relative z-10 my-2">
+        {/* DASHBOARD VIEW */}
+        <div
+          className={`w-full transition-all duration-750 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            activeTab === 'Dashboard'
+              ? 'opacity-100 translate-y-0 pointer-events-auto'
+              : 'opacity-0 translate-y-4 pointer-events-none hidden'
+          }`}
+        >
+          <main className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+            <div className="lg:col-span-4 flex flex-col justify-center space-y-6">
+              <div className="space-y-3">
+                <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-white leading-tight font-display">
+                  Real-Time{' '}
+                  <span className="text-[#ffe600] drop-shadow-[0_0_15px_rgba(255,230,0,0.5)]">
+                    Predictive
+                  </span>
+                  <br />
+                  Grid Management
+                </h1>
+                <p className="text-xs lg:text-sm text-[#94a3b8] leading-relaxed max-w-sm">
+                  An AI Layer for Real-Time Power monitoring that flags grid failures minutes before they happen
+                </p>
+              </div>
+
+              <div className="inline-flex items-center justify-between bg-[#0d121c]/90 border border-white/[0.08] rounded-xl p-3 max-w-[240px] shadow-lg backdrop-blur-sm">
+                <div>
+                  <div className="text-[9px] font-mono tracking-widest text-[#64748b] uppercase">
+                    GRID ACTIVE
+                  </div>
+                  <div className="text-sm font-bold text-white font-display tracking-wide mt-0.5">
+                    ALIN M Hospital
+                  </div>
+                </div>
+                <button className="w-6 h-6 rounded-md bg-[#1e283d] border border-white/[0.1] flex items-center justify-center text-[#ffe600] hover:scale-105 transition-transform">
+                  <Plus size={14} />
+                </button>
+              </div>
+            </div>
+
+            <div className="lg:col-span-5 h-[340px] flex items-center justify-center relative">
+              <IsometricHospitalGrid isAnomaly={isAnomaly} />
+            </div>
+
+            <div className="lg:col-span-3 flex justify-end items-start">
+              <AIDetectionBanner
+                confidence={isAnomaly ? 94.8 : 0.0}
+                title="Power Outage"
+                status={isAnomaly ? 'CONFIRMED' : 'STANDBY'}
+                isAnomaly={isAnomaly}
+              />
+            </div>
+          </main>
+        </div>
+
+        {/* ANALYTICS VIEW */}
+        <div
+          className={`w-full transition-all duration-750 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            activeTab === 'Analytics'
+              ? 'opacity-100 translate-y-0 pointer-events-auto'
+              : 'opacity-0 translate-y-4 pointer-events-none hidden'
+          }`}
+        >
+          <div className="bg-[#0c1017]/80 border border-white/[0.08] backdrop-blur-xl rounded-3xl p-8 max-w-4xl mx-auto shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-80 h-80 bg-[#ffe600]/[0.03] blur-[80px] rounded-full pointer-events-none" />
+            <div className="flex items-center justify-between border-b border-white/[0.06] pb-4 mb-6">
+              <div>
+                <span className="text-[10px] font-mono tracking-widest text-[#ffe600] uppercase font-bold">
+                  TELEMETRY INTELLIGENCE // ANALYTICS
+                </span>
+                <h2 className="text-2xl font-bold font-display text-white mt-1">
+                  Grid Frequency & Phase Analytics
+                </h2>
+              </div>
+              <div className="px-3 py-1 rounded-full bg-[#ffe600]/10 border border-[#ffe600]/30 text-[#ffe600] text-xs font-mono">
+                SIGNAL ARCHIVE • ZERO-DATA MODE
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+                <div className="text-xs text-[#94a3b8]">Sampling Rate</div>
+                <div className="text-xl font-mono font-bold text-white mt-1">0 kS/s</div>
+              </div>
+              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+                <div className="text-xs text-[#94a3b8]">THD (Harmonic Distortion)</div>
+                <div className="text-xl font-mono font-bold text-white mt-1">0.00%</div>
+              </div>
+              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+                <div className="text-xs text-[#94a3b8]">Peak Divergence</div>
+                <div className="text-xl font-mono font-bold text-white mt-1">0.0 ms</div>
+              </div>
+            </div>
+            <div className="h-44 w-full rounded-xl bg-[#080b11] border border-white/[0.05] p-4 flex flex-col justify-between">
+              <div className="flex justify-between text-[11px] font-mono text-[#64748b]">
+                <span>AWAITING STREAMING BUFFER</span>
+                <span>FFT SPECTRUM: INACTIVE</span>
+              </div>
+              <div className="flex items-center justify-center text-xs font-mono text-[#475569]">
+                Connecting to GrydAI Telemetry WebSocket daemon...
+              </div>
+              <div className="flex justify-between text-[10px] font-mono text-[#334155]">
+                <span>0 Hz</span>
+                <span>25 Hz</span>
+                <span>50 Hz</span>
+                <span>75 Hz</span>
+                <span>100 Hz</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* DIAGNOSTICS VIEW */}
+        <div
+          className={`w-full transition-all duration-750 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            activeTab === 'Diagnostics'
+              ? 'opacity-100 translate-y-0 pointer-events-auto'
+              : 'opacity-0 translate-y-4 pointer-events-none hidden'
+          }`}
+        >
+          <div className="bg-[#0c1017]/80 border border-white/[0.08] backdrop-blur-xl rounded-3xl p-8 max-w-4xl mx-auto shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-80 h-80 bg-cyan-500/[0.03] blur-[80px] rounded-full pointer-events-none" />
+            <div className="flex items-center justify-between border-b border-white/[0.06] pb-4 mb-6">
+              <div>
+                <span className="text-[10px] font-mono tracking-widest text-[#06b6d4] uppercase font-bold">
+                  HARDWARE HEALTH // DIAGNOSTICS
+                </span>
+                <h2 className="text-2xl font-bold font-display text-white mt-1">
+                  Substation Node Health
+                </h2>
+              </div>
+              <div className="px-3 py-1 rounded-full bg-[#06b6d4]/10 border border-[#06b6d4]/30 text-[#06b6d4] text-xs font-mono">
+                DIAGNOSTIC BUS • READY
+              </div>
+            </div>
+            <div className="space-y-3">
+              {[
+                { name: 'Feeder Sub-Transformer 01', status: 'Standby', code: 'NODE_0x00' },
+                { name: 'Hospital Critical Circuit Backup', status: 'Standby', code: 'NODE_0x01' },
+                { name: 'Solar PV Inverter Coupling', status: 'Standby', code: 'NODE_0x02' },
+                { name: 'Lithium BESS Energy Storage Link', status: 'Standby', code: 'NODE_0x03' },
+              ].map((node) => (
+                <div key={node.name} className="flex items-center justify-between p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:border-white/[0.1] transition-all">
+                  <div className="flex items-center gap-3">
+                    <span className="w-2 h-2 rounded-full bg-[#64748b]" />
+                    <span className="text-sm font-medium text-white">{node.name}</span>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs font-mono">
+                    <span className="text-[#64748b]">{node.code}</span>
+                    <span className="px-2 py-0.5 rounded bg-white/[0.05] text-[#94a3b8]">{node.status}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. BOTTOM TELEMETRY DOCK */}
+      <footer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 z-20 mt-2">
+        <TelemetryCard telemetry={telemetry} />
+        <StabilityIndexCard stability={stability} status={isAnomaly ? 'Warning' : 'Standby'} />
+        <ImpactCard earning={0.00} co2SavedKm="0" co2OffsetMt="0.0" />
+        <TotalEnergyCard percentage={energyPercent} currentKw={currentKw} limitKw={0} />
+      </footer>
+    </div>
+  );
+}
