@@ -3,9 +3,9 @@
 @tailwind utilities;
 
 :root {
-  --bg-core: #06080d;
-  --bg-surface: #0c1017;
-  --bg-card: rgba(18, 24, 38, 0.7);
+  --bg-core: #000000;
+  --bg-surface: #0a0d14;
+  --bg-card: rgba(12, 16, 25, 0.7);
   --electric-yellow: #ffe600;
   --electric-amber: #f59e0b;
   --electric-red: #ef4444;
@@ -24,12 +24,17 @@
   padding: 0;
 }
 
+html {
+  font-size: 17px;
+}
+
 html, body {
   width: 100%;
   min-height: 100%;
-  background-color: var(--bg-core);
+  background-color: #000000;
   color: #f1f5f9;
   font-family: var(--font-body);
+  font-size: 17px;
   overflow-x: hidden;
   user-select: none;
   cursor: none; /* Replaced by our custom morphing cursor */

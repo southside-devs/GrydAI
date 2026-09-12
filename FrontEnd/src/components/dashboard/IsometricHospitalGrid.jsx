@@ -217,7 +217,7 @@ export default function IsometricHospitalGrid({ isAnomaly = false }) {
         />
 
         {/* Ambient bottom blend overlay to hide any bottom share/watermark bars */}
-        <div className="absolute bottom-0 left-0 right-0 h-14 pointer-events-none z-20 bg-gradient-to-t from-[#080b11] via-[#080b11]/80 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-14 pointer-events-none z-20 bg-gradient-to-t from-[#000000] via-[#000000]/80 to-transparent" />
       </div>
     </div>
   );

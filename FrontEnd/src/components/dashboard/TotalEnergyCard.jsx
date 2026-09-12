@@ -11,20 +11,20 @@ export default function TotalEnergyCard({ percentage = 0, currentKw = 0, limitKw
   return (
     <div className="flex-1 bg-[#0b0e14]/90 border border-white/[0.08] rounded-2xl p-5 flex flex-col justify-between backdrop-blur-md relative overflow-hidden group hover:border-[#ffe600]/30 transition-all duration-300">
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-mono font-semibold tracking-wider text-[#94a3b8] uppercase">
+        <span className="text-sm font-mono font-bold tracking-wider text-[#94a3b8] uppercase">
           TOTAL ENERGY
         </span>
-        <button className="text-[#64748b] hover:text-[#ffe600] transition-colors">
-          <ArrowUpRight size={17} />
+        <button className="text-[#64748b] hover:text-[#ffe600] transition-colors cursor-pointer">
+          <ArrowUpRight size={20} />
         </button>
       </div>
 
-      <div className="flex items-center justify-between mt-1">
-        <span className="text-2xl font-bold font-mono text-white tracking-tight">
+      <div className="flex items-center justify-between mt-1.5">
+        <span className="text-4xl font-extrabold font-mono text-white tracking-tight">
           {percentage}%
         </span>
         <div className="text-[#f59e0b] drop-shadow-[0_0_8px_#f59e0b]">
-          <Zap size={18} fill="#f59e0b" />
+          <Zap size={24} fill="#f59e0b" />
         </div>
       </div>
 
@@ -65,7 +65,7 @@ export default function TotalEnergyCard({ percentage = 0, currentKw = 0, limitKw
             y={cy - 6}
             textAnchor="middle"
             fill="#ffffff"
-            fontSize="10"
+            fontSize="12"
             fontFamily="'JetBrains Mono', monospace"
             fontWeight="bold"
           >
@@ -74,7 +74,7 @@ export default function TotalEnergyCard({ percentage = 0, currentKw = 0, limitKw
         </svg>
       </div>
 
-      <div className="flex items-center justify-between text-[10px] font-mono text-[#64748b] pt-1">
+      <div className="flex items-center justify-between text-xs font-mono text-[#64748b] pt-1">
         <span className="uppercase">PEAK DEMAND CAP</span>
         <span className="text-[#94a3b8] font-medium">{limitKw} kW Limit</span>
       </div>

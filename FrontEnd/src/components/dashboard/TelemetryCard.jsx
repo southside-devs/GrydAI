@@ -11,48 +11,48 @@ export default function TelemetryCard({ telemetry = {} }) {
 
   return (
     <div className="flex-1 bg-[#0b0e14]/90 border border-white/[0.08] rounded-2xl p-5 flex flex-col justify-between backdrop-blur-md relative overflow-hidden group hover:border-[#ffe600]/30 transition-all duration-300">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-[12px] font-medium text-[#94a3b8] tracking-wide">
+      <div className="flex items-center justify-between mb-3.5">
+        <span className="text-base font-semibold text-[#94a3b8] tracking-wide">
           Incoming Feeder Telemetry
         </span>
-        <button className="text-[#64748b] hover:text-[#ffe600] transition-colors">
-          <ArrowUpRight size={17} />
+        <button className="text-[#64748b] hover:text-[#ffe600] transition-colors cursor-pointer">
+          <ArrowUpRight size={20} />
         </button>
       </div>
 
-      <div className="flex items-baseline gap-4 mb-2">
+      <div className="flex items-baseline gap-4 mb-2.5">
         <div className="flex items-baseline gap-1">
-          <span className="text-xl font-bold font-mono text-white tracking-tight">
+          <span className="text-3xl font-bold font-mono text-white tracking-tight">
             {voltage.toFixed(1)}
           </span>
-          <span className="text-[11px] font-mono text-[#64748b]">V</span>
+          <span className="text-sm font-mono text-[#64748b] font-medium">V</span>
         </div>
         <div className="flex items-baseline gap-1">
-          <span className="text-xl font-bold font-mono text-white tracking-tight">
+          <span className="text-3xl font-bold font-mono text-white tracking-tight">
             {current.toFixed(1)}
           </span>
-          <span className="text-[11px] font-mono text-[#64748b]">A</span>
+          <span className="text-sm font-mono text-[#64748b] font-medium">A</span>
         </div>
         <div className="flex items-baseline gap-1">
-          <span className="text-xl font-bold font-mono text-white tracking-tight">
+          <span className="text-3xl font-bold font-mono text-white tracking-tight">
             {frequency.toFixed(1)}
           </span>
-          <span className="text-[11px] font-mono text-[#64748b]">Hz</span>
+          <span className="text-sm font-mono text-[#64748b] font-medium">Hz</span>
         </div>
       </div>
 
-      <div className="flex items-center gap-3 text-[9px] font-mono tracking-wider text-[#94a3b8] uppercase mb-4">
-        <div className="flex items-center gap-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b] shadow-[0_0_6px_#f59e0b]" />
+      <div className="flex items-center gap-3.5 text-xs font-mono tracking-wider text-[#94a3b8] uppercase mb-4">
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b] shadow-[0_0_6px_#f59e0b]" />
           <span>VOLTAGE</span>
         </div>
-        <div className="flex items-center gap-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#f97316] shadow-[0_0_6px_#f97316]" />
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#f97316] shadow-[0_0_6px_#f97316]" />
           <span>CURRENT</span>
         </div>
-        <div className="flex items-center gap-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6] shadow-[0_0_6px_#3b82f6]" />
-          <span>FREQUEN...</span>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#3b82f6] shadow-[0_0_6px_#3b82f6]" />
+          <span>FREQUENCY</span>
         </div>
       </div>
 
