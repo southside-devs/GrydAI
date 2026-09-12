@@ -181,9 +181,9 @@ class GridAnomalyDetector:
                 "z_score": round(effective_z, 2)
             }
 
-        # 2. Raw Level Detection (Current, Voltage, or Autoencoder Z-Score)
-        is_critical = (i_sim >= 23.0) or (v_sim <= 196.0) or (v_sim >= 244.0) or (effective_z >= 4.5)
-        is_warning = (i_sim >= 18.5) or (v_sim <= 208.0) or (v_sim >= 232.0) or (effective_z >= 2.0)
+        # 2. Level Detection with wide, predictable demo windows
+        is_critical = (i_sim >= 23.0) or (v_sim <= 195.0) or (v_sim >= 245.0)
+        is_warning = (i_sim >= 18.5) or (v_sim <= 211.0) or (v_sim >= 229.0) or (effective_z >= 3.5 and 212.0 <= v_sim <= 228.0)
 
         target_status = 2 if is_critical else (1 if is_warning else 0)
 
@@ -209,12 +209,12 @@ class GridAnomalyDetector:
             can_downgrade = False
             if self.hold_timer == 0:
                 if self.current_status == 2:
-                    # Critical to Warning hysteresis gap
-                    if (i_sim < 21.5) and (200.0 < v_sim < 240.0) and (effective_z < 3.8):
+                    # Critical to Warning hysteresis gap: V in [198, 242], I < 21.5A
+                    if (198.0 <= v_sim <= 242.0) and (i_sim < 21.5):
                         can_downgrade = True
                 elif self.current_status == 1:
-                    # Warning to Normal hysteresis gap
-                    if (i_sim < 17.5) and (212.0 < v_sim < 228.0) and (effective_z < 1.5):
+                    # Warning to Normal hysteresis gap: V in [213, 227], I < 17.5A, Z < 2.5
+                    if (213.0 <= v_sim <= 227.0) and (i_sim < 17.5) and (effective_z < 2.5):
                         can_downgrade = True
 
             if can_downgrade:
@@ -236,21 +236,21 @@ class GridAnomalyDetector:
         # 4. Synchronized Dynamic Message and Anomaly Score
         if self.current_status == 2:
             norm_score = min(1.00, 0.75 + max(0.0, effective_z - 3.5) * 0.08)
-            if i_sim >= 23.0:
+            if i_sim >= 21.5:
                 message = f"CRITICAL: Severe Feeder Overload ({i_sim:.1f}A)"
-            elif v_sim <= 196.0:
+            elif v_sim <= 198.0:
                 message = f"CRITICAL: Severe Transformer Winding Sag ({v_sim:.1f}V)"
-            elif v_sim >= 244.0:
+            elif v_sim >= 242.0:
                 message = f"CRITICAL: Catastrophic Voltage Surge ({v_sim:.1f}V)"
             else:
-                message = f"CRITICAL: Severe Microgrid Harmonic Distortion (Z={effective_z:.1f})"
+                message = f"CRITICAL: Microgrid Phase Instability (Z={effective_z:.1f})"
         elif self.current_status == 1:
             norm_score = min(0.70, 0.25 + max(0.0, effective_z - 1.5) * 0.15)
-            if i_sim >= 18.5:
+            if i_sim >= 17.5:
                 message = f"Warning: High Feeder Demand / EV Surge ({i_sim:.1f}A)"
-            elif v_sim <= 208.0:
+            elif v_sim <= 213.0:
                 message = f"Warning: Secondary Feeder Voltage Sag ({v_sim:.1f}V)"
-            elif v_sim >= 232.0:
+            elif v_sim >= 227.0:
                 message = f"Warning: Feeder Overvoltage Swell ({v_sim:.1f}V)"
             else:
                 message = f"Warning: Microgrid Harmonic Distortion (Z={effective_z:.1f})"
