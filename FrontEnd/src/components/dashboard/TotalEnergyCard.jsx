@@ -59,14 +59,6 @@ export default function TotalEnergyCard({
       {/* Tachometer / Speedometer Gauge with Needle */}
       <div className="relative flex items-center justify-center -my-1">
         <svg viewBox="0 0 140 80" className="w-36 h-auto overflow-visible">
-          <defs>
-            <linearGradient id="energyGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#f59e0b" />
-              <stop offset="60%" stopColor="#f97316" />
-              <stop offset="100%" stopColor="#ef4444" />
-            </linearGradient>
-          </defs>
-
           {/* Outer dashed tick track */}
           <path
             d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
@@ -76,11 +68,11 @@ export default function TotalEnergyCard({
             strokeDasharray="2 3"
           />
 
-          {/* Solid gradient arc */}
+          {/* Solid yellow arc */}
           <path
             d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
             fill="none"
-            stroke="url(#energyGrad)"
+            stroke="#f59e0b"
             strokeWidth="5"
             strokeDasharray={arcLength}
             strokeDashoffset={strokeOffset}
