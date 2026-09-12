@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GRYD AI // 120-Second Grid Revolution</title>
+<style>
+  :root {
+    --obsidian: #08090E;
+    --cyan:     #22D3EE;
+    --yellow:   #FACC15;
+    --amber:    #F59E0B;
+    --red:      #EF4444;
+    --emerald:  #10B981;
+    --violet:   #8B5CF6;
+    --white:    #FFFFFF;
+    --dim:      #94A3B8;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+  html, body {
+    width: 100%; height: 100%; min-height: 100vh;
+    background: var(--obsidian);
+    overflow: hidden;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+  }
+  #stage {
+    position: fixed; inset: 0;
+    width: 100vw; height: 100dvh;
+    background: var(--obsidian); overflow: hidden;
+  }
+  canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; }
+
+  /* ACT BANNER */
+  #actBanner {
+    position: absolute; top: 5.5%; left: 50%; transform: translateX(-50%);
+    text-align: center; pointer-events: none; opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+  #actBanner.show { opacity: 1; }
+  #actBanner .act-num {
+    font-size: clamp(8px, 0.9vw, 11px); letter-spacing: 4px; color: var(--cyan);
+    text-transform: uppercase; margin-bottom: 3px;
+  }
+  #actBanner .act-title {
+    font-size: clamp(13px, 1.9vw, 22px); font-weight: 700; letter-spacing: 1px;
+    color: var(--white); text-shadow: 0 0 22px rgba(34,211,238,0.4);
+  }
+
+  /* HUD BRAND */
+  #hudBrand {
+    position: absolute; top: 4.5%; left: 3.5%; pointer-events: none;
+    opacity: 0; transition: opacity 0.4s ease;
+  }
+  #hudBrand.show { opacity: 1; }
+  #hudBrand .brand-name {
+    font-size: clamp(13px, 1.7vw, 22px); font-weight: 800; letter-spacing: 2px;
+    color: var(--yellow); text-shadow: 0 0 18px rgba(250,204,21,0.5);
+  }
+  #hudBrand .brand-sub {
+    font-size: clamp(7px, 0.8vw, 10px); letter-spacing: 2.5px; color: var(--dim);
+    text-transform: uppercase; margin-top: 3px;
+  }
+
+  /* CAPTION */
+  #caption {
+    position: absolute; left: 50%; bottom: 8%; transform: translateX(-50%);
+    max-width: 80%; text-align: center; color: var(--white);
+    font-size: clamp(11px, 1.7vw, 21px); font-weight: 600;
+    letter-spacing: 0.3px; line-height: 1.45;
+    text-shadow: 0 0 18px rgba(250,204,21,0.2), 0 2px 10px rgba(0,0,0,0.8);
+    opacity: 0; transition: opacity 0.45s ease; pointer-events: none;
+  }
+  #caption.show { opacity: 1; }
+
+  /* TELEMETRY SIDEBAR */
+  #telemBox {
+    position: absolute; top: 50%; right: 2.5%; transform: translateY(-50%);
+    width: clamp(130px, 13vw, 195px);
+    background: rgba(8,9,14,0.88); border: 1px solid rgba(34,211,238,0.3);
+    border-radius: 6px; padding: 11px 13px; pointer-events: none;
+    opacity: 0; transition: opacity 0.4s ease;
+  }
+  #telemBox.show { opacity: 1; }
+  #telemBox .tl-title {
+    font-size: clamp(7px, 0.75vw, 9.5px); letter-spacing: 2.5px; color: var(--cyan);
+    text-transform: uppercase; margin-bottom: 9px;
+    border-bottom: 1px solid rgba(34,211,238,0.2); padding-bottom: 5px;
+  }
+  .tl-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px; }
+  .tl-lbl { font-size: clamp(6px, 0.7vw, 9px); color: var(--dim); }
+  .tl-val { font-size: clamp(8px, 0.9vw, 11px); font-weight: 700; color: var(--white); }
+  .tl-val.warn { color: var(--amber); }
+  .tl-val.crit { color: var(--red); }
+  .tl-val.good { color: var(--emerald); }
+
+  /* CENTER READOUT */
+  #centerReadout {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    text-align: center; pointer-events: none; opacity: 0; transition: opacity 0.4s ease;
+  }
+  #centerReadout.show { opacity: 1; }
+  #centerReadout .cr-label {
+    font-size: clamp(8px, 0.95vw, 11px); letter-spacing: 4px; color: var(--cyan);
+    text-transform: uppercase; margin-bottom: 5px;
+  }
+  #centerReadout .cr-big {
+    font-size: clamp(42px, 7vw, 88px); font-weight: 800; color: var(--white);
+    letter-spacing: 2px; text-shadow: 0 0 30px rgba(34,211,238,0.5); line-height: 1;
+  }
+  #centerReadout .cr-sub {
+    margin-top: 10px; font-size: clamp(9px, 1.05vw, 13px); letter-spacing: 2px;
+    color: var(--emerald); text-shadow: 0 0 12px rgba(16,185,129,0.6);
+  }
+
+  /* STEP TAGS */
+  .stepTag {
+    position: absolute; top: 22%; left: 50%; transform: translateX(-50%);
+    font-size: clamp(9px, 1.15vw, 14px); font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; padding: 8px 20px;
+    border: 1px solid rgba(245,158,11,0.8); border-radius: 4px; color: var(--amber);
+    background: rgba(8,9,14,0.9); box-shadow: 0 0 22px rgba(245,158,11,0.18);
+    pointer-events: none; opacity: 0; transition: opacity 0.35s ease; white-space: nowrap;
+  }
+  .stepTag.show { opacity: 1; }
+
+  /* KPI PANEL */
+  #kpiWrap {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    display: flex; gap: clamp(28px, 6vw, 90px);
+    opacity: 0; transition: opacity 0.6s ease; pointer-events: none;
+  }
+  #kpiWrap.show { opacity: 1; }
+  .kpi { text-align: center; }
+  .kpi .num {
+    font-size: clamp(28px, 4.5vw, 64px); font-weight: 800; color: var(--white);
+    text-shadow: 0 0 22px rgba(16,185,129,0.5); font-variant-numeric: tabular-nums;
+  }
+  .kpi .lbl {
+    margin-top: 7px; font-size: clamp(9px, 1.05vw, 14px); color: var(--dim);
+    letter-spacing: 0.5px; font-weight: 500; max-width: 15ch;
+    margin-left: auto; margin-right: auto;
+  }
+
+  /* HERO OUTRO */
+  #heroOutro {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; background: var(--obsidian);
+    opacity: 0; transition: opacity 1.2s ease; pointer-events: none;
+  }
+  #heroOutro.show { opacity: 1; }
+  #heroOutro .ho-brand {
+    font-size: clamp(40px, 8vw, 110px); font-weight: 900; letter-spacing: 3px;
+    color: var(--white); text-shadow: 0 0 50px rgba(250,204,21,0.35), 0 0 100px rgba(16,185,129,0.12);
+  }
+  #heroOutro .ho-sub {
+    margin-top: 14px; font-size: clamp(11px, 1.5vw, 20px); color: var(--dim); letter-spacing: 0.5px;
+  }
+  #heroOutro .ho-cta {
+    margin-top: 26px; font-size: clamp(9px, 1.05vw, 14px); letter-spacing: 3px;
+    color: var(--cyan); text-transform: uppercase; text-shadow: 0 0 14px rgba(34,211,238,0.5);
+  }
+
+  /* START OVERLAY */
+  #startOverlay {
+    position: absolute; inset: 0; z-index: 10;
+    background: radial-gradient(ellipse at 50% 40%, #0F1624 0%, #05070B 80%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 18px; color: var(--white); text-align: center;
+  }
+  #startOverlay .so-brand {
+    font-size: clamp(22px, 4.5vw, 56px); font-weight: 900; letter-spacing: 2px;
+    text-shadow: 0 0 35px rgba(250,204,21,0.3);
+  }
+  #startOverlay .so-brand span { color: var(--yellow); }
+  #startOverlay .so-tagline {
+    font-size: clamp(10px, 1.25vw, 16px); color: var(--dim); max-width: 540px;
+    line-height: 1.6; letter-spacing: 0.3px;
+  }
+  #startOverlay .so-acts {
+    display: flex; gap: clamp(8px, 1.8vw, 22px); flex-wrap: wrap; justify-content: center;
+  }
+  .so-act-pill {
+    font-size: clamp(7px, 0.8vw, 10px); letter-spacing: 1.5px; text-transform: uppercase;
+    padding: 5px 12px; border: 1px solid rgba(34,211,238,0.35); border-radius: 20px;
+    color: var(--cyan); background: rgba(34,211,238,0.06);
+  }
+  #playBtn {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: clamp(11px, 1.2vw, 15px); letter-spacing: 2.5px; font-weight: 700;
+    text-transform: uppercase; color: #08090E; background: var(--yellow);
+    border: none; padding: 14px 36px; border-radius: 4px; cursor: pointer;
+    box-shadow: 0 0 34px rgba(250,204,21,0.42);
+    transition: transform 0.14s ease, box-shadow 0.14s ease;
+  }
+  #playBtn:hover { transform: translateY(-2px); box-shadow: 0 0 52px rgba(250,204,21,0.7); }
+  #playBtn:active { transform: translateY(0); }
+  #soundNote { font-size: clamp(8px, 0.85vw, 11px); color: #4B5B72; letter-spacing: 0.5px; }
+
+  /* CONTROLS */
+  #pauseIndicator {
+    position: absolute; top: 20px; right: 72px; z-index: 20;
+    font-size: clamp(8px, 0.85vw, 11px); font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--yellow); background: rgba(8,9,14,0.9);
+    border: 1px solid rgba(250,204,21,0.5); padding: 8px 16px; border-radius: 4px;
+    display: none; align-items: center; gap: 8px; pointer-events: none;
+    animation: pulsePause 1.5s ease-in-out infinite alternate;
+  }
+  #pauseIndicator.show { display: flex; }
+  @keyframes pulsePause {
+    from { opacity: 0.75; transform: scale(0.97); }
+    to   { opacity: 1;    transform: scale(1.02); }
+  }
+  #fullscreenBtn {
+    position: absolute; top: 20px; right: 20px; z-index: 30;
+    background: rgba(8,9,14,0.72); color: var(--yellow);
+    border: 1px solid rgba(250,204,21,0.4); border-radius: 4px;
+    width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 16px; transition: all 0.2s ease;
+  }
+  #fullscreenBtn:hover {
+    background: rgba(250,204,21,0.14); border-color: var(--yellow);
+    box-shadow: 0 0 22px rgba(250,204,21,0.3); transform: scale(1.06);
+  }
+  #timeline {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+    background: rgba(255,255,255,0.07);
+  }
+  #timelineFill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--cyan), var(--emerald), var(--yellow));
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 374px) {
+    #actBanner .act-title { font-size: 12px; }
+    #caption { font-size: 10px; bottom: 11%; }
+    #telemBox { display: none; }
+    .stepTag { font-size: 8px; padding: 5px 10px; white-space: normal; text-align: center; }
+  }
+  @media (min-width: 375px) and (max-width: 639px) {
+    #telemBox { display: none; }
+    .stepTag { white-space: normal; text-align: center; }
+  }
+  @media (min-width: 640px) and (max-width: 767px) { #telemBox { width: 125px; } }
+  @media (min-width: 768px) and (max-width: 1023px) { #telemBox { width: 148px; } }
+  @media (min-width: 1024px) and (max-width: 1279px) { #telemBox { width: 165px; } }
+  @media (min-width: 1280px) and (max-width: 1535px) { #telemBox { width: 185px; } }
+  @media (min-width: 1536px) {
+    #telemBox { width: 210px; }
+    #actBanner .act-title { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c"></canvas>
+
+  <div id="hudBrand">
+    <div class="brand-name">GRYD AI</div>
+    <div class="brand-sub">Predictive Grid Intelligence</div>
+  </div>
+
+  <div id="actBanner">
+    <div class="act-num" id="actNum">ACT 1 OF 5</div>
+    <div class="act-title" id="actTitle">THE STRAIN</div>
+  </div>
+
+  <div id="caption"></div>
+
+  <div id="telemBox">
+    <div class="tl-title">Live Telemetry</div>
+    <div class="tl-row"><span class="tl-lbl">V_RMS</span><span class="tl-val" id="tlVrms">230.4V</span></div>
+    <div class="tl-row"><span class="tl-lbl">THD(v)</span><span class="tl-val" id="tlThd">1.2%</span></div>
+    <div class="tl-row"><span class="tl-lbl">FREQ</span><span class="tl-val" id="tlFreq">50.00Hz</span></div>
+    <div class="tl-row"><span class="tl-lbl">LOAD</span><span class="tl-val" id="tlLoad">68%</span></div>
+    <div class="tl-row"><span class="tl-lbl">MSE</span><span class="tl-val" id="tlMse">0.4</span></div>
+  </div>
+
+  <div id="centerReadout">
+    <div class="cr-label" id="crLabel">Pre-Fault Signature Detected</div>
+    <div class="cr-big" id="crBig">+10:00</div>
+    <div class="cr-sub">Autonomous Orchestration Engaged</div>
+  </div>
+
+  <div class="stepTag" id="stepTag1">STEP 1 — ISOLATING FAULTED FEEDER</div>
+  <div class="stepTag" id="stepTag2">STEP 2 — BESS + SOLAR RAMPING</div>
+  <div class="stepTag" id="stepTag3">STEP 3 — SEAMLESS TRANSFER: 48ms // 0mV DROP</div>
+  <div class="stepTag" id="stepTag4">STEP 4 — LIVE HORIZON CONFIRMED CLEAR</div>
+
+  <div id="kpiWrap">
+    <div class="kpi"><div class="num" id="kpi1">0s</div><div class="lbl">Outage Downtime</div></div>
+    <div class="kpi"><div class="num" id="kpi2">&#x20B9;0</div><div class="lbl">Losses Avoided</div></div>
+    <div class="kpi"><div class="num" id="kpi3">0.0t</div><div class="lbl">CO&#8322; Prevented</div></div>
+  </div>
+
+  <div id="heroOutro">
+    <div class="ho-brand">GRYD AI</div>
+    <div class="ho-sub">The grid never fails. It just adapts.</div>
+    <div class="ho-cta">Predicting failures before the lights go out</div>
+  </div>
+
+  <div id="pauseIndicator">&#10074;&#10074; Paused — Space to resume</div>
+  <button id="fullscreenBtn" title="Toggle Fullscreen (F)">&#x26F6;</button>
+  <div id="timeline"><div id="timelineFill"></div></div>
+
+  <div id="startOverlay">
+    <div class="so-brand">GRYD <span>AI</span></div>
+    <div class="so-tagline">
+      A 120-second procedural explainer. Watch the grid strain, the SCADA blind spot form,
+      the ML engine detect the anomaly, the digital twin forecast the failure —
+      and GRYD AI prevent it.
+    </div>
+    <div class="so-acts">
+      <div class="so-act-pill">Act 1 · The Strain</div>
+      <div class="so-act-pill">Act 2 · SCADA Blind Spot</div>
+      <div class="so-act-pill">Act 3 · ML Engine</div>
+      <div class="so-act-pill">Act 4 · Live Horizon</div>
+      <div class="so-act-pill">Act 5 · Pre-emption</div>
+    </div>
+    <button id="playBtn">&#9654; Play 120s</button>
+    <div id="soundNote">Click Play to enable audio — browsers require a user gesture.</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // PALETTE
+  var C = {
+    obsidian:'#08090E', navy:'#0B0F1A', cyan:'#22D3EE', yellow:'#FACC15',
+    amber:'#F59E0B', red:'#EF4444', emerald:'#10B981', violet:'#8B5CF6',
+    white:'#FFFFFF', dim:'#475569'
+  };
+
+  // CANVAS
+  var canvas = document.getElementById('c');
+  var ctx    = canvas.getContext('2d');
+  var W = 0, H = 0;
+  var DPR = Math.min(window.devicePixelRatio || 1, 2);
+  var S = 1;
+
+  function resize() {
+    W = window.innerWidth  || document.documentElement.clientWidth;
+    H = window.innerHeight || document.documentElement.clientHeight;
+    canvas.width  = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    S = Math.max(0.5, Math.min(2.2, Math.min(W / 1280, H / 720)));
+  }
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', function(){ setTimeout(resize, 150); });
+  resize();
+
+  // AUDIO
+  var actx = null;
+  function ensureAudio() {
+    if (!actx) {
+      try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { actx = null; }
+    }
+  }
+  function tone(freq, dur, type, vol, delay) {
+    if (!actx) return;
+    var t0  = actx.currentTime + (delay || 0);
+    var osc = actx.createOscillator();
+    var g   = actx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol || 0.12, t0 + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(g).connect(actx.destination);
+    osc.start(t0); osc.stop(t0 + dur + 0.05);
+  }
+  function noiseBurst(dur, vol, delay) {
+    if (!actx) return;
+    var t0  = actx.currentTime + (delay || 0);
+    var len = Math.round(actx.sampleRate * dur);
+    var buf = actx.createBuffer(1, len, actx.sampleRate);
+    var d   = buf.getChannelData(0);
+    for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    var src = actx.createBufferSource(); src.buffer = buf;
+    var g   = actx.createGain();
+    g.gain.setValueAtTime(vol || 0.18, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    src.connect(g).connect(actx.destination); src.start(t0);
+  }
+  function sweep(f0, f1, dur, delay) {
+    if (!actx) return;
+    var t0  = actx.currentTime + (delay || 0);
+    var osc = actx.createOscillator();
+    var g   = actx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(f0, t0);
+    osc.frequency.linearRampToValueAtTime(f1, t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.14, t0 + 0.06);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(g).connect(actx.destination);
+    osc.start(t0); osc.stop(t0 + dur + 0.05);
+  }
+
+  // AUDIO CUES
+  var audioCues = [
+    { t:  10, fn: function(){ tone(55, 1.2, 'sine', 0.28); noiseBurst(0.5, 0.2); } },
+    { t:  22, fn: function(){ tone(60, 0.8, 'sine', 0.35); noiseBurst(0.6, 0.28, 0.03); } },
+    { t:  27, fn: function(){ sweep(200, 80, 0.6, 0); } },
+    { t:  50, fn: function(){ sweep(180, 900, 0.4, 0); } },
+    { t:  72, fn: function(){ tone(880, 0.07, 'square', 0.07); } },
+    { t:  85, fn: function(){ tone(1046, 0.18, 'sine', 0.1); tone(1318, 0.24, 'sine', 0.1, 0.15); } },
+    { t: 110, fn: function(){ sweep(300, 1100, 0.5, 0); } },
+    { t: 118, fn: function(){ tone(1046, 0.15, 'sine', 0.12); tone(1318, 0.22, 'sine', 0.12, 0.12); tone(1568, 0.28, 'sine', 0.1, 0.26); } }
+  ];
+  var firedCues = {};
+
+  // CAPTIONS
+  var captionCues = [
+    { s:  0,  e:  6,  text: 'The modern grid — powering AI data centers and hospital ICUs simultaneously.' },
+    { s: 10,  e: 16,  text: 'EV fleet charging and GPU cluster surge. Demand spikes 40% in 8 seconds.' },
+    { s: 18,  e: 24,  text: 'Micro-arcing in the substation busbar. Sub-threshold — SCADA sees nothing.' },
+    { s: 25,  e: 31,  text: 'Traditional SCADA: polling every 4 seconds. The fault signature lasts 80ms.' },
+    { s: 32,  e: 38,  text: 'BLIND SPOT: The digital meter missed it. The protection relay never triggered.' },
+    { s: 41,  e: 47,  text: 'GRYD AI Edge Gateway — 115,200 baud continuous telemetry ingest.' },
+    { s: 48,  e: 55,  text: 'Feature extraction: dV/dt, THD(v), high-frequency transient noise.' },
+    { s: 57,  e: 65,  text: 'Autoencoder reconstruction error climbing. Pattern unknown. Anomaly confirmed.' },
+    { s: 68,  e: 76,  text: 'Isolation Forest scores diverge. Digital twin projects cascade failure in T minus 10 min.' },
+    { s: 78,  e: 86,  text: 'Live Horizon: 10-minute prediction window. Failure probability: 94.7%.' },
+    { s: 88,  e: 95,  text: 'Autonomous pre-emption sequence initiated. Zero human input required.' },
+    { s: 97,  e: 104, text: 'Feeder isolated. BESS and Solar ramping. Hospital transfer: 48ms, 0mV drop.' },
+    { s: 108, e: 116, text: 'Grid continuity maintained. Fault contained. Zero disruption to critical loads.' },
+    { s: 117, e: 120, text: 'GRYD AI — Predicting grid failures before the lights go out.' }
+  ];
+
+  var captionEl = document.getElementById('caption');
+  function updateCaption(t) {
+    var cue = null;
+    for (var i = 0; i < captionCues.length; i++) {
+      if (t >= captionCues[i].s && t < captionCues[i].e) { cue = captionCues[i]; break; }
+    }
+    if (cue) {
+      if (captionEl.textContent !== cue.text) captionEl.textContent = cue.text;
+      captionEl.classList.add('show');
+    } else {
+      captionEl.classList.remove('show');
+    }
+  }
+
+  // TELEMETRY
+  var tlVrms = document.getElementById('tlVrms');
+  var tlThd  = document.getElementById('tlThd');
+  var tlFreq = document.getElementById('tlFreq');
+  var tlLoad = document.getElementById('tlLoad');
+  var tlMse  = document.getElementById('tlMse');
+  var telemBox = document.getElementById('telemBox');
+
+  function updateTelemetry(t) {
+    if (t < 25) {
+      var stress = Math.min(1, Math.max(0, (t - 9) / 13));
+      var vrms   = (230.4 - stress * 18 + Math.sin(t * 12) * 1.2).toFixed(1);
+      var thd    = (1.2 + stress * 4.8 + Math.abs(Math.sin(t * 7)) * 0.8).toFixed(1);
+      var freq   = (50 + Math.sin(t * 0.7) * 0.12 - stress * 0.35).toFixed(2);
+      var load   = Math.min(99, Math.round(68 + stress * 28));
+      tlVrms.textContent = vrms + 'V';
+      tlVrms.className   = 'tl-val' + (parseFloat(vrms) < 215 ? ' crit' : stress > 0.5 ? ' warn' : '');
+      tlThd.textContent  = thd + '%';
+      tlThd.className    = 'tl-val' + (parseFloat(thd) > 5 ? ' crit' : parseFloat(thd) > 3 ? ' warn' : '');
+      tlFreq.textContent = freq + 'Hz';
+      tlFreq.className   = 'tl-val' + (parseFloat(freq) < 49.7 ? ' warn' : '');
+      tlLoad.textContent = load + '%';
+      tlLoad.className   = 'tl-val' + (load > 90 ? ' crit' : load > 80 ? ' warn' : '');
+      tlMse.textContent  = (0.4 + stress * 0.6).toFixed(1);
+      tlMse.className    = 'tl-val';
+      telemBox.classList.toggle('show', t > 3);
+    } else if (t < 70) {
+      var mse = Math.min(25, 0.4 + Math.pow((t - 25) / 45, 2.4) * 25).toFixed(1);
+      tlVrms.textContent = '211.8V'; tlVrms.className = 'tl-val warn';
+      tlThd.textContent  = '6.1%';   tlThd.className  = 'tl-val crit';
+      tlFreq.textContent = '49.61Hz';tlFreq.className = 'tl-val warn';
+      tlLoad.textContent = '96%';    tlLoad.className = 'tl-val crit';
+      tlMse.textContent  = mse;
+      tlMse.className    = 'tl-val' + (parseFloat(mse) > 15 ? ' crit' : parseFloat(mse) > 8 ? ' warn' : '');
+      telemBox.classList.add('show');
+    } else if (t < 90) {
+      var rec = Math.min(1, (t - 70) / 20);
+      tlVrms.textContent = (211.8 + rec * 18.6).toFixed(1) + 'V'; tlVrms.className = 'tl-val good';
+      tlThd.textContent  = (6.1 - rec * 4.9).toFixed(1) + '%';    tlThd.className  = 'tl-val good';
+      tlFreq.textContent = (49.61 + rec * 0.39).toFixed(2) + 'Hz';tlFreq.className = 'tl-val good';
+      tlLoad.textContent = Math.round(96 - rec * 28) + '%';        tlLoad.className = 'tl-val good';
+      tlMse.textContent  = (25 - rec * 24.6).toFixed(1);           tlMse.className  = 'tl-val good';
+      telemBox.classList.add('show');
+    } else {
+      telemBox.classList.remove('show');
+    }
+  }
+
+  // GEOMETRY
+  var ISO = Math.PI / 6;
+  function isoProj(x, y, z) {
+    return { x: (x - y) * Math.cos(ISO), y: (x + y) * Math.sin(ISO) - z };
+  }
+  function shade(hex, amt) {
+    var n = parseInt(hex.replace('#',''), 16);
+    var clamp = function(v){ return Math.max(0, Math.min(255, v)); };
+    return 'rgb(' + clamp((n>>16)+amt) + ',' + clamp(((n>>8)&0xff)+amt) + ',' + clamp((n&0xff)+amt) + ')';
+  }
+  function isoBox(ox, oy, w, d, h, color, glow, glowBlur, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha !== undefined ? alpha : 1;
+    if (glow) { ctx.shadowColor = glow; ctx.shadowBlur = glowBlur || 16; }
+    function p(x,y,z){ var i=isoProj(x,y,z); return {x:ox+i.x, y:oy+i.y}; }
+    var top=[p(0,0,h),p(w,0,h),p(w,d,h),p(0,d,h)];
+    var lft=[p(0,0,0),p(0,d,0),p(0,d,h),p(0,0,h)];
+    var rgt=[p(w,0,0),p(w,d,0),p(w,d,h),p(w,0,h)];
+    [[top,30],[lft,-30],[rgt,-8]].forEach(function(fa){
+      ctx.fillStyle = shade(color, fa[1]);
+      ctx.beginPath();
+      fa[0].forEach(function(pt,i){ i?ctx.lineTo(pt.x,pt.y):ctx.moveTo(pt.x,pt.y); });
+      ctx.closePath(); ctx.fill();
+    });
+    ctx.restore();
+  }
+  function isoLine(ox, oy, from, to, color, width, glow) {
+    var a=isoProj(from[0],from[1],from[2]), b=isoProj(to[0],to[1],to[2]);
+    ctx.save();
+    if (glow) { ctx.shadowColor = color; ctx.shadowBlur = glow; }
+    ctx.strokeStyle=color; ctx.lineWidth=width||2;
+    ctx.beginPath(); ctx.moveTo(ox+a.x,oy+a.y); ctx.lineTo(ox+b.x,oy+b.y); ctx.stroke();
+    ctx.restore();
+  }
+  function lbl(x, y, text, color, size) {
+    ctx.save();
+    ctx.font = (size||11)+'px \'Helvetica Neue\', Arial, sans-serif';
+    ctx.fillStyle=color; ctx.shadowColor=color; ctx.shadowBlur=6;
+    ctx.fillText(text, x, y); ctx.restore();
+  }
+  function hudFrame() {
+    ctx.save();
+    ctx.strokeStyle='rgba(250,204,21,0.28)'; ctx.lineWidth=2;
+    var m=22, L=28;
+    [[m,m,1,1],[W-m,m,-1,1],[m,H-m,1,-1],[W-m,H-m,-1,-1]].forEach(function(c){
+      ctx.beginPath();
+      ctx.moveTo(c[0],c[1]+c[3]*L); ctx.lineTo(c[0],c[1]); ctx.lineTo(c[0]+c[2]*L,c[1]);
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
+
+  // SCOPE BUFFER
+  var scopeBuf = [], SCOPE_LEN = 280;
+  function pushSample(v) { scopeBuf.push(v); if (scopeBuf.length>SCOPE_LEN) scopeBuf.shift(); }
+  function drawScope(x, y, w, h, color, showThresh) {
+    ctx.save();
+    ctx.strokeStyle='rgba(255,255,255,0.07)'; ctx.strokeRect(x,y,w,h);
+    if (showThresh) {
+      var ty=y+h*0.84;
+      ctx.setLineDash([6,5]); ctx.strokeStyle=C.red; ctx.globalAlpha=0.8;
+      ctx.beginPath(); ctx.moveTo(x,ty); ctx.lineTo(x+w,ty); ctx.stroke();
+      ctx.setLineDash([]); ctx.globalAlpha=1;
+      lbl(x+6,ty-5,'TRIP THRESHOLD 180V',C.red,Math.round(9*S));
+    }
+    if (scopeBuf.length>2) {
+      ctx.beginPath();
+      ctx.strokeStyle=color||C.emerald; ctx.shadowColor=color||C.emerald;
+      ctx.shadowBlur=10; ctx.lineWidth=2;
+      for (var i=0;i<scopeBuf.length;i++) {
+        var px=x+(i/SCOPE_LEN)*w, py=y+h*0.42-scopeBuf[i]*h*0.32;
+        i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // BACKGROUND
+  function drawBg(t) {
+    ctx.fillStyle=C.obsidian; ctx.fillRect(0,0,W,H);
+    ctx.save();
+    ctx.strokeStyle='rgba(255,255,255,0.026)'; ctx.lineWidth=1;
+    var gs=52, off=(t*5)%gs;
+    for (var x=-gs;x<W+gs;x+=gs){ ctx.beginPath(); ctx.moveTo(x+off,0); ctx.lineTo(x+off,H); ctx.stroke(); }
+    for (var y=-gs;y<H+gs;y+=gs){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+    ctx.restore();
+    var vg=ctx.createRadialGradient(W/2,H/2,H*0.18,W/2,H/2,H*0.9);
+    vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,0.6)');
+    ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+  }
+
+  // ============================================================
+  // ACT 1 — THE STRAIN (0-25s)
+  // ============================================================
+  function act1(t) {
+    var cx=W*0.5, cy=H*0.47;
+    var blackout=t>=22;
+
+    // substation
+    isoBox(cx-400,cy-60,55,55,75,'#1B2535', t<22?C.emerald:null, 22);
+
+    // feeders
+    if (!blackout) {
+      var heat=Math.min(1,Math.max(0,(t-9)/13));
+      var cL=heat>0.6?C.amber:C.cyan;
+      isoLine(cx-345,cy-20,[0,0,28],[90,0,28],cL,4*S,18);
+      ctx.save();
+      ctx.setLineDash([7,10]); ctx.lineDashOffset=-(t*80)%18;
+      ctx.strokeStyle=C.yellow; ctx.globalAlpha=0.7; ctx.lineWidth=2.5;
+      var a=isoProj(0,0,28), b=isoProj(90,0,28);
+      ctx.beginPath();
+      ctx.moveTo(cx-345+a.x,cy-20+a.y); ctx.lineTo(cx-345+b.x,cy-20+b.y);
+      ctx.stroke(); ctx.restore();
+    }
+
+    // AI data center (server racks)
+    var dcColor=blackout?'#111418':'#1C3A5E';
+    isoBox(cx-240,cy-80,90,65,100,dcColor, blackout?null:C.cyan, 28, blackout?0.7:1);
+    if (!blackout) {
+      for (var row=0;row<5;row++) {
+        for (var col=0;col<4;col++) {
+          var blink=Math.floor(t*3+row*0.7+col*0.3)%3;
+          ctx.fillStyle = blink===0?C.emerald:blink===1?C.cyan:C.amber;
+          ctx.globalAlpha=0.9;
+          ctx.fillRect(cx-225+col*14,cy-60-row*13,6,5);
+          ctx.globalAlpha=1;
+        }
+      }
+    }
+
+    // EV charger icon at 10s
+    if (t>=10 && !blackout) {
+      var evA=Math.min(1,(t-10)/1.5);
+      ctx.save(); ctx.globalAlpha=evA;
+      ctx.fillStyle=C.yellow; ctx.shadowColor=C.yellow; ctx.shadowBlur=14;
+      var ex=cx-168, ey=cy+52;
+      ctx.beginPath(); ctx.moveTo(ex+8,ey-20); ctx.lineTo(ex-4,ey+2); ctx.lineTo(ex+4,ey+2);
+      ctx.lineTo(ex-5,ey+22); ctx.lineTo(ex+10,ey-2); ctx.lineTo(ex+2,ey-2); ctx.closePath(); ctx.fill();
+      ctx.font=Math.round(9*S)+'px \'Helvetica Neue\', Arial, sans-serif';
+      ctx.fillStyle=C.amber; ctx.shadowBlur=5; ctx.fillText('EV FLEET',ex-4,ey+36);
+      ctx.restore();
+    }
+
+    // hospital
+    var hospColor=blackout?'#141820':'#D8E8F5';
+    isoBox(cx+60,cy-45,175,130,blackout?100:135,hospColor, blackout?null:'#90CAFF', 36, blackout?0.85:1);
+    isoBox(cx+155,cy+50,90,60,blackout?60:82,blackout?'#101420':'#C2D5EC', blackout?null:'#90CAFF',20);
+    if (!blackout) {
+      for (var i=0;i<6;i++) {
+        for (var j=0;j<4;j++) {
+          ctx.fillStyle='rgba(250,204,21,0.6)';
+          ctx.shadowColor=C.yellow; ctx.shadowBlur=7;
+          ctx.fillRect(cx+78+i*22,cy-82+j*18,8,11);
+        }
+      }
+      ctx.shadowBlur=0;
+      ctx.save(); ctx.fillStyle=C.red; ctx.shadowColor=C.red; ctx.shadowBlur=12;
+      ctx.fillRect(cx+155,cy-102,6,26); ctx.fillRect(cx+144,cy-91,28,6); ctx.restore();
+    }
+
+    // blackout strobe
+    if (blackout) {
+      if (Math.floor(t*5)%2===0) {
+        ctx.save(); ctx.fillStyle='rgba(239,68,68,0.16)'; ctx.fillRect(0,0,W,H); ctx.restore();
+      }
+    }
+    if (t>=21.8 && t<22.2) {
+      ctx.save();
+      ctx.fillStyle='rgba(255,255,255,'+(0.88*(1-Math.abs(t-22)/0.2))+')';
+      ctx.fillRect(0,0,W,H); ctx.restore();
+    }
+
+    // oscilloscope
+    var v=Math.sin(t*2.18*Math.PI*2)*0.62;
+    if (t>9 && !blackout && Math.random()<0.16) v+=(Math.random()>0.5?1:-1)*(0.4+Math.random()*0.6);
+    if (blackout) v=0;
+    pushSample(v);
+    var sw=Math.min(W*0.65,800), sh=Math.min(H*0.17,130);
+    var sx=cx-sw*0.5, sy=H*0.72;
+    drawScope(sx,sy,sw,sh,blackout?'#2A3040':C.emerald,!blackout&&t>8);
+    if (t>4&&!blackout) lbl(sx+4,sy-8,'V_RMS 230.4V  //  BUSBAR TELEMETRY  //  115200 BAUD',C.cyan,Math.round(10*S));
+    if (t>9&&!blackout) lbl(sx+4,sy+sh+14,'MICRO-ARCING DETECTED — HARMONIC DISTORTION SUB-THRESHOLD',C.amber,Math.round(9*S));
+  }
+
+  // ============================================================
+  // ACT 2 — SCADA BLIND SPOT (25-50s), local t 0-25
+  // ============================================================
+  function act2(t) {
+    var cx=W*0.5, cy=H*0.47;
+    if (t<0.7) {
+      ctx.save(); ctx.fillStyle='rgba(255,255,255,'+(0.85*(1-t/0.7))+')';
+      ctx.fillRect(0,0,W,H); ctx.restore();
+    }
+
+    var tlW=Math.min(W*0.7,840), tlH=6;
+    var tlX=cx-tlW/2, tlY=cy-35;
+    ctx.save();
+    ctx.fillStyle='rgba(255,255,255,0.08)'; ctx.fillRect(tlX,tlY,tlW,tlH);
+    var pollInterval=tlW/6;
+    for (var i=0;i<=6;i++) {
+      var tx=tlX+i*pollInterval;
+      ctx.strokeStyle='rgba(255,255,255,0.3)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(tx,tlY-14); ctx.lineTo(tx,tlY+tlH+14); ctx.stroke();
+      if (i<6) lbl(tx+5,tlY-18,'T+'+(i*4)+'s',C.dim,Math.round(9*S));
+    }
+    for (var j=0;j<6;j++) {
+      ctx.fillStyle='rgba(239,68,68,0.1)';
+      ctx.fillRect(tlX+j*pollInterval,tlY,pollInterval,tlH);
+    }
+    // 80ms fault marker
+    var faultX=tlX+tlW*0.28;
+    ctx.fillStyle=C.yellow; ctx.shadowColor=C.yellow; ctx.shadowBlur=20;
+    ctx.fillRect(faultX,tlY-8,Math.max(4,tlW*0.005),tlH+16);
+    ctx.shadowBlur=0; ctx.restore();
+    if (t>2) lbl(faultX-8,tlY-28,'80ms FAULT',C.yellow,Math.round(10*S));
+    if (t>4) lbl(cx-140,tlY+tlH+46,'SCADA POLLING: 4s WINDOW  //  80ms FAULT = INVISIBLE',C.red,Math.round(10*S));
+
+    // SCADA HMI mockup
+    if (t>6) {
+      var mA=Math.min(1,(t-6)/2);
+      var mW=Math.min(W*0.38,380), mH=Math.min(H*0.38,280);
+      var mX=cx-mW/2, mY=cy+14;
+      ctx.save(); ctx.globalAlpha=mA;
+      ctx.fillStyle='#0D1420'; ctx.strokeStyle='rgba(255,255,255,0.14)'; ctx.lineWidth=1.5;
+      ctx.fillRect(mX,mY,mW,mH); ctx.strokeRect(mX,mY,mW,mH);
+      ctx.fillStyle='#162035'; ctx.fillRect(mX,mY,mW,36);
+      lbl(mX+12,mY+22,'SCADA HMI  //  FEEDER F3-NORTH  //  LAST UPDATE: 4.0s AGO',C.dim,Math.round(9*S));
+      var rows=[['V_RMS','230.4 V',C.white],['I_RMS','186.2 A',C.white],['FREQ','50.00 Hz',C.white],
+                ['THD(v)','1.2%',C.white],['STATUS','NORMAL',C.emerald],['ALARM','NONE',C.emerald]];
+      rows.forEach(function(r,i){
+        var ry=mY+54+i*32;
+        lbl(mX+12,ry,r[0],C.dim,Math.round(10*S));
+        lbl(mX+mW-100,ry,r[1],r[2],Math.round(11*S));
+        ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(mX+10,ry+8); ctx.lineTo(mX+mW-10,ry+8); ctx.stroke();
+      });
+      if (t>10) {
+        var sA=Math.min(1,(t-10)/1.5);
+        ctx.globalAlpha=sA;
+        ctx.strokeStyle=C.red; ctx.shadowColor=C.red; ctx.shadowBlur=22; ctx.lineWidth=4;
+        ctx.strokeRect(mX+10,mY+10,mW-20,mH-20);
+        ctx.font='bold '+Math.round(26*S)+'px \'Helvetica Neue\', Arial, sans-serif';
+        ctx.fillStyle=C.red; ctx.shadowBlur=18; ctx.globalAlpha=sA*0.88;
+        ctx.save(); ctx.translate(cx,cy+mH*0.5+32); ctx.rotate(-0.22);
+        ctx.fillText('FAULT MISSED',-75,0); ctx.restore();
+      }
+      ctx.restore();
+    }
+  }
+
+  // ============================================================
+  // ACT 3 — ML ENGINE & DIGITAL TWIN (50-80s), local t 0-30
+  // ============================================================
+  function act3(t) {
+    var cx=W*0.5, cy=H*0.47;
+
+    // edge gateway
+    var gwX=cx-220, gwY=cy-70;
+    ctx.save();
+    ctx.fillStyle='#101828'; ctx.strokeStyle=C.cyan; ctx.lineWidth=1.8;
+    ctx.shadowColor=C.cyan; ctx.shadowBlur=20;
+    ctx.fillRect(gwX,gwY,140,76); ctx.strokeRect(gwX,gwY,140,76);
+    ctx.fillStyle=C.cyan; ctx.shadowBlur=8;
+    ctx.font='bold '+Math.round(12*S)+'px \'Helvetica Neue\', Arial, sans-serif';
+    ctx.fillText('GRYD EDGE GW',gwX+10,gwY+30);
+    ctx.font=Math.round(9*S)+'px \'Helvetica Neue\', Arial, sans-serif';
+    ctx.fillStyle=C.dim; ctx.fillText('115200 BAUD — CONTINUOUS',gwX+10,gwY+50);
+    for (var p=0;p<6;p++) { ctx.fillStyle=C.cyan; ctx.fillRect(gwX-8,gwY+8+p*10,8,4); }
+    ctx.restore();
+
+    // data packets
+    if (t>1) {
+      var cycle=1.1;
+      for (var k=0;k<5;k++) {
+        var pt=((t-k*0.26)%cycle)/cycle;
+        if (pt<0||pt>1) continue;
+        var endX=cx+50;
+        var px2=gwX+140+(endX-gwX-140)*pt;
+        var py2=gwY+38+Math.sin(pt*Math.PI)*-18;
+        ctx.save(); ctx.fillStyle=C.yellow; ctx.shadowColor=C.yellow; ctx.shadowBlur=12;
+        ctx.beginPath(); ctx.arc(px2,py2,4,0,Math.PI*2); ctx.fill(); ctx.restore();
+      }
+    }
+
+    // feature extraction
+    if (t>4) {
+      var feats=['dV/dt  SLEW RATE','THD(v)  HARMONICS','HF TRANSIENT'];
+      var bW=138, bH=58, gap=18;
+      var totalW=feats.length*bW+(feats.length-1)*gap;
+      var startX=cx-totalW/2;
+      feats.forEach(function(f,i){
+        var reveal=Math.min(1,Math.max(0,(t-4-i*1.4)/1.2));
+        var bx=startX+i*(bW+gap), by=cy+66;
+        ctx.save(); ctx.globalAlpha=reveal;
+        ctx.fillStyle='rgba(14,22,38,0.9)'; ctx.strokeStyle=C.amber;
+        ctx.shadowColor=C.amber; ctx.shadowBlur=12; ctx.lineWidth=1.6;
+        ctx.fillRect(bx,by,bW,bH); ctx.strokeRect(bx,by,bW,bH);
+        ctx.fillStyle=C.white; ctx.shadowBlur=0;
+        ctx.font=Math.round(10*S)+'px \'Helvetica Neue\', Arial, sans-serif';
+        ctx.fillText(f,bx+10,by+20);
+        ctx.beginPath(); ctx.strokeStyle=C.amber; ctx.lineWidth=1.5; ctx.shadowBlur=5;
+        for (var s=0;s<24;s++) {
+          var sx=bx+8+s*5.2, sy=by+50-Math.abs(Math.sin(s*0.8+t*4+i))*13;
+          s===0?ctx.moveTo(sx,sy):ctx.lineTo(sx,sy);
+        }
+        ctx.stroke(); ctx.restore();
+      });
+    }
+
+    // autoencoder
+    if (t>10) {
+      var netReveal=Math.min(1,(t-10)/2.5);
+      var netY=cy-22;
+      var layers=[{n:6,x:cx-180},{n:3,x:cx-30},{n:1,x:cx+80},{n:3,x:cx+180},{n:6,x:cx+310}];
+      ctx.save(); ctx.globalAlpha=netReveal;
+      var nodePos=layers.map(function(l){
+        var arr=[];
+        for (var i=0;i<l.n;i++) arr.push({x:l.x,y:netY+(i-(l.n-1)/2)*30});
+        return arr;
+      });
+      for (var li=0;li<nodePos.length-1;li++) {
+        nodePos[li].forEach(function(a){
+          nodePos[li+1].forEach(function(b){
+            ctx.strokeStyle='rgba(34,211,238,0.16)'; ctx.lineWidth=1;
+            ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+          });
+        });
+      }
+      nodePos.forEach(function(layer,li){
+        layer.forEach(function(pt){
+          var isBot=li===2;
+          var col=isBot?C.red:li<2?C.cyan:C.emerald;
+          ctx.beginPath(); ctx.fillStyle=col; ctx.shadowColor=col; ctx.shadowBlur=isBot?20:12;
+          ctx.arc(pt.x,pt.y,isBot?10:7,0,Math.PI*2); ctx.fill();
+        });
+      });
+      lbl(cx-180,netY+100,'INPUT',C.cyan,Math.round(9*S));
+      lbl(cx+68,netY+42,'LATENT',C.red,Math.round(9*S));
+      lbl(cx+298,netY+100,'RECON',C.emerald,Math.round(9*S));
+      ctx.restore();
+    }
+
+    // MSE chart
+    if (t>14) {
+      var gReveal=Math.min(1,(t-14)/3);
+      var gx=cx+350, gw=Math.min(W*0.19,190), gh=Math.min(H*0.21,130);
+      var gy=cy-gh/2;
+      ctx.save(); ctx.globalAlpha=gReveal;
+      ctx.fillStyle='rgba(8,9,14,0.9)'; ctx.strokeStyle='rgba(255,255,255,0.13)'; ctx.lineWidth=1.2;
+      ctx.fillRect(gx,gy,gw,gh); ctx.strokeRect(gx,gy,gw,gh);
+      var thY=gy+gh*0.28;
+      ctx.setLineDash([5,4]); ctx.strokeStyle=C.yellow;
+      ctx.beginPath(); ctx.moveTo(gx,thY); ctx.lineTo(gx+gw,thY); ctx.stroke(); ctx.setLineDash([]);
+      lbl(gx+5,thY-5,'THRESHOLD',C.yellow,Math.round(8*S));
+      ctx.beginPath(); ctx.strokeStyle=C.red; ctx.shadowColor=C.red; ctx.shadowBlur=12; ctx.lineWidth=2.5;
+      for (var mi=0;mi<=50;mi++) {
+        var frac=mi/50;
+        if (frac>gReveal) break;
+        var mpx=gx+frac*gw, val=Math.pow(frac,2.3);
+        var mpy=gy+gh-val*gh*0.94;
+        mi===0?ctx.moveTo(mpx,mpy):ctx.lineTo(mpx,mpy);
+      }
+      ctx.stroke();
+      lbl(gx+4,gy-10,'AUTOENCODER MSE',C.white,Math.round(9*S));
+      ctx.restore();
+    }
+
+    // Isolation Forest scatter
+    if (t>18) {
+      var ifA=Math.min(1,(t-18)/2.5);
+      var sfX=cx-340, sfY=cy-50, sfW=118, sfH=108;
+      ctx.save(); ctx.globalAlpha=ifA;
+      ctx.fillStyle='rgba(8,9,14,0.9)'; ctx.strokeStyle='rgba(255,255,255,0.1)';
+      ctx.fillRect(sfX,sfY,sfW,sfH); ctx.strokeRect(sfX,sfY,sfW,sfH);
+      lbl(sfX+4,sfY-10,'ISOLATION FOREST',C.violet,Math.round(9*S));
+      for (var ni=0;ni<28;ni++) {
+        var ang=(ni/28)*Math.PI*2, nr=18+Math.sin(ni*7.3)*8;
+        ctx.beginPath(); ctx.fillStyle=C.emerald; ctx.shadowColor=C.emerald; ctx.shadowBlur=6;
+        ctx.arc(sfX+sfW*0.45+Math.cos(ang)*nr,sfY+sfH*0.5+Math.sin(ang)*nr*0.6,3,0,Math.PI*2); ctx.fill();
+      }
+      [[sfX+sfW*0.85,sfY+sfH*0.2],[sfX+sfW*0.8,sfY+sfH*0.75],[sfX+sfW*0.9,sfY+sfH*0.5]].forEach(function(pt){
+        ctx.beginPath(); ctx.fillStyle=C.red; ctx.shadowColor=C.red; ctx.shadowBlur=14;
+        ctx.arc(pt[0],pt[1],5,0,Math.PI*2); ctx.fill();
+      });
+      ctx.restore();
+    }
+
+    // Digital twin forecast bar
+    if (t>22) {
+      var dtA=Math.min(1,(t-22)/3);
+      var dtW=Math.min(W*0.55,580), dtH=50;
+      var dtX=cx-dtW/2, dtY=cy+148;
+      ctx.save(); ctx.globalAlpha=dtA;
+      ctx.fillStyle='rgba(8,9,14,0.88)'; ctx.strokeStyle='rgba(139,92,246,0.5)'; ctx.lineWidth=1.5;
+      ctx.fillRect(dtX,dtY,dtW,dtH); ctx.strokeRect(dtX,dtY,dtW,dtH);
+      lbl(dtX+10,dtY+16,'DIGITAL TWIN FORECAST',C.violet,Math.round(9*S));
+      lbl(dtX+10,dtY+36,'CASCADE FAILURE IN T-10:00  //  PROBABILITY: 94.7%',C.red,Math.round(11*S));
+      ctx.restore();
+    }
+  }
+
+  // ============================================================
+  // ACT 4 — DYNAMIC ISLAND LIVE HORIZON (80-105s), local t 0-25
+  // ============================================================
+  var crEl  = document.getElementById('centerReadout');
+  var crBig = document.getElementById('crBig');
+
+  function act4(t) {
+    var cx=W*0.5, cy=H*0.47;
+    hudFrame();
+    crEl.classList.toggle('show', t<8);
+    if (t<4) { crBig.textContent='+10:00'; }
+    else if (t<8) {
+      var frac=(t-4)/4;
+      var secs=Math.round(600*(1-frac));
+      var m2=Math.floor(secs/60), s2=secs%60;
+      crBig.textContent='+'+('0'+m2).slice(-2)+':'+('0'+s2).slice(-2);
+    }
+
+    // live horizon timeline
+    if (t>6) {
+      var lhA=Math.min(1,(t-6)/2);
+      var lhW=Math.min(W*0.75,900), lhH=66;
+      var lhX=cx-lhW/2, lhY=cy+44;
+      ctx.save(); ctx.globalAlpha=lhA;
+      ctx.fillStyle='rgba(8,9,14,0.88)'; ctx.strokeStyle='rgba(34,211,238,0.28)'; ctx.lineWidth=1.5;
+      ctx.fillRect(lhX,lhY,lhW,lhH); ctx.strokeRect(lhX,lhY,lhW,lhH);
+      lbl(lhX+10,lhY-12,'LIVE HORIZON  //  10-MINUTE PREDICTION WINDOW',C.cyan,Math.round(10*S));
+      var grad=ctx.createLinearGradient(lhX,lhY,lhX+lhW,lhY);
+      grad.addColorStop(0,'rgba(16,185,129,0.55)');
+      grad.addColorStop(0.4,'rgba(245,158,11,0.45)');
+      grad.addColorStop(0.75,'rgba(239,68,68,0.55)');
+      grad.addColorStop(1,'rgba(239,68,68,0.88)');
+      ctx.fillStyle=grad; ctx.fillRect(lhX,lhY,lhW,lhH);
+      var events=[
+        {frac:0.1,  label:'SURGE',    col:C.amber},
+        {frac:0.28, label:'MICRO-ARC',col:C.amber},
+        {frac:0.55, label:'TRIP?',    col:C.red},
+        {frac:0.82, label:'CASCADE?', col:C.red},
+        {frac:1.0,  label:'BLACKOUT', col:C.red}
+      ];
+      events.forEach(function(ev){
+        var ex=lhX+ev.frac*lhW;
+        ctx.strokeStyle=ev.col; ctx.shadowColor=ev.col; ctx.shadowBlur=10; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.moveTo(ex,lhY); ctx.lineTo(ex,lhY+lhH); ctx.stroke();
+        ctx.fillStyle=ev.col; ctx.shadowBlur=6;
+        ctx.font='bold '+Math.round(9*S)+'px \'Helvetica Neue\', Arial, sans-serif';
+        ctx.fillText(ev.label,ex-18,lhY-5);
+      });
+      ctx.shadowBlur=0; ctx.restore();
+    }
+
+    // probability bars
+    if (t>10) {
+      var pbA=Math.min(1,(t-10)/2.5);
+      var bars=[
+        {label:'Thermal Overload',     prob:0.88, col:C.red},
+        {label:'Protection Relay Trip',prob:0.72, col:C.amber},
+        {label:'Cascade Failure',      prob:0.947,col:C.red},
+        {label:'Full Blackout',        prob:0.64, col:C.amber}
+      ];
+      var bW2=Math.min(W*0.33,360), bH2=18, bGap=24;
+      var bX=cx+70, bY=cy-82;
+      ctx.save(); ctx.globalAlpha=pbA;
+      bars.forEach(function(b,i){
+        var by=bY+i*(bH2+bGap);
+        lbl(bX,by-4,b.label,C.dim,Math.round(10*S));
+        ctx.fillStyle='rgba(255,255,255,0.07)'; ctx.fillRect(bX,by,bW2,bH2);
+        ctx.fillStyle=b.col; ctx.shadowColor=b.col; ctx.shadowBlur=10;
+        ctx.fillRect(bX,by,bW2*b.prob,bH2);
+        lbl(bX+bW2+8,by+bH2-2,Math.round(b.prob*100)+'%',b.col,Math.round(11*S));
+      });
+      ctx.shadowBlur=0; ctx.restore();
+    }
+
+    // confidence gauge
+    if (t>14) {
+      var ga=Math.min(1,(t-14)/2.5);
+      var gr=Math.min(W*0.09,75);
+      var gcx=cx-210, gcy=cy+22;
+      ctx.save(); ctx.globalAlpha=ga;
+      ctx.strokeStyle='rgba(255,255,255,0.1)'; ctx.lineWidth=gr*0.22;
+      ctx.beginPath(); ctx.arc(gcx,gcy,gr,Math.PI,2*Math.PI); ctx.stroke();
+      ctx.strokeStyle=C.emerald; ctx.shadowColor=C.emerald; ctx.shadowBlur=22;
+      ctx.beginPath(); ctx.arc(gcx,gcy,gr,Math.PI,Math.PI+0.947*Math.PI); ctx.stroke();
+      ctx.fillStyle=C.white; ctx.shadowBlur=0;
+      ctx.font='bold '+Math.round(22*S)+'px \'Helvetica Neue\', Arial, sans-serif';
+      ctx.textAlign='center'; ctx.fillText('94.7%',gcx,gcy+8);
+      ctx.font=Math.round(9*S)+'px \'Helvetica Neue\', Arial, sans-serif';
+      ctx.fillStyle=C.dim; ctx.fillText('CONFIDENCE',gcx,gcy+24);
+      ctx.textAlign='left'; ctx.restore();
+    }
+  }
+
+  // ============================================================
+  // ACT 5 — AUTONOMOUS PRE-EMPTION (105-120s), local t 0-15
+  // ============================================================
+  var kpiWrap   = document.getElementById('kpiWrap');
+  var kpi1      = document.getElementById('kpi1');
+  var kpi2      = document.getElementById('kpi2');
+  var kpi3      = document.getElementById('kpi3');
+  var heroOutro = document.getElementById('heroOutro');
+  var stepTag1  = document.getElementById('stepTag1');
+  var stepTag2  = document.getElementById('stepTag2');
+  var stepTag3  = document.getElementById('stepTag3');
+  var stepTag4  = document.getElementById('stepTag4');
+
+  function easeOut(x) { return 1-Math.pow(1-x,3); }
+
+  function act5(t) {
+    var cx=W*0.5, cy=H*0.5;
+    hudFrame();
+    crEl.classList.remove('show');
+
+    stepTag1.classList.toggle('show', t>=0  && t<4);
+    stepTag2.classList.toggle('show', t>=4  && t<8);
+    stepTag3.classList.toggle('show', t>=8  && t<11);
+    stepTag4.classList.toggle('show', t>=11 && t<13.5);
+
+    // step 1: feeder isolation
+    if (t>=0 && t<4) {
+      var p=Math.min(1,t/3);
+      var lW=Math.min(W*0.55,640);
+      var x1=cx-lW*0.5, x2=cx+lW*0.5, ly=cy+15;
+      ctx.save(); ctx.shadowColor=C.amber; ctx.shadowBlur=p<0.7?18:4;
+      ctx.strokeStyle=p<0.7?C.amber:'#3A4050'; ctx.lineWidth=7;
+      ctx.beginPath();
+      if (p<0.7) { ctx.moveTo(x1,ly); ctx.lineTo(x2,ly); }
+      else { var gap=((p-0.7)/0.3)*60; ctx.moveTo(x1,ly); ctx.lineTo(cx-gap,ly); ctx.moveTo(cx+gap,ly); ctx.lineTo(x2,ly); }
+      ctx.stroke(); ctx.restore();
+      if (p>=0.95) lbl(cx-50,ly-24,'FEEDER ISOLATED',C.amber,Math.round(13*S));
+    }
+
+    // step 2: BESS + Solar meters
+    if (t>=4 && t<8) {
+      var p2=Math.min(1,(t-4)/3);
+      var mW=Math.min(W*0.42,440), mH=22, mX=cx-mW*0.5;
+      drawMeterBar(mX,cy-22,mW,mH,p2,C.emerald,'BESS STORAGE RAMPING');
+      drawMeterBar(mX,cy+20,mW,mH,Math.max(0,p2-0.18),C.cyan,'SOLAR PV GENERATION RAMPING');
+    }
+
+    // step 3: 48ms transfer
+    if (t>=8 && t<11) {
+      var p3=Math.min(1,(t-8)/1.5);
+      var tw=Math.min(W*0.44,460), th=20, tx=cx-tw*0.5, ty=cy+20;
+      ctx.save(); ctx.strokeStyle='rgba(255,255,255,0.22)'; ctx.strokeRect(tx,ty,tw,th);
+      ctx.fillStyle=C.emerald; ctx.shadowColor=C.emerald; ctx.shadowBlur=18;
+      ctx.fillRect(tx,ty,tw*p3,th); ctx.restore();
+      lbl(tx+tw+12,ty+th-2,'48ms TRANSFER  //  0mV DROP',C.white,Math.round(13*S));
+      isoBox(cx+160,cy-60,120,90,100,'#D0E5F5','#90CAFF',30);
+      pushSample(Math.sin(t*8)*0.48);
+      drawScope(cx+100,H*0.78,200,50,C.emerald,false);
+    }
+
+    // step 4 + KPIs
+    kpiWrap.classList.toggle('show', t>=11 && t<14.5);
+    if (t>=11 && t<14.5) {
+      var p2a=easeOut(Math.min(1,Math.max(0,(t-11.6)/2)));
+      var p3a=easeOut(Math.min(1,Math.max(0,(t-12.2)/2)));
+      kpi1.textContent='0s';
+      kpi2.textContent='&#x20B9;'+Math.floor(p2a*1164400).toLocaleString('en-IN');
+      kpi3.textContent=(p3a*2.4).toFixed(1)+'t';
+    }
+
+    heroOutro.classList.toggle('show', t>=13.5);
+  }
+
+  function drawMeterBar(x, y, w, h, p, color, text) {
+    ctx.save();
+    ctx.strokeStyle='rgba(255,255,255,0.18)'; ctx.strokeRect(x,y,w,h);
+    ctx.fillStyle=color; ctx.shadowColor=color; ctx.shadowBlur=12;
+    ctx.fillRect(x,y,w*Math.min(1,p),h); ctx.restore();
+    lbl(x,y-6,text,color,Math.round(9*S));
+  }
+
+  // ACT BANNER UPDATER
+  var actBanner = document.getElementById('actBanner');
+  var actNum    = document.getElementById('actNum');
+  var actTitle2 = document.getElementById('actTitle');
+  var hudBrand  = document.getElementById('hudBrand');
+  var ACT_DEFS  = [
+    {num:'ACT 1 OF 5', title:'THE STRAIN',              start:0,   end:25},
+    {num:'ACT 2 OF 5', title:'SCADA BLIND SPOT',        start:25,  end:50},
+    {num:'ACT 3 OF 5', title:'ML ENGINE & DIGITAL TWIN',start:50,  end:80},
+    {num:'ACT 4 OF 5', title:'DYNAMIC ISLAND — LIVE HORIZON', start:80, end:105},
+    {num:'ACT 5 OF 5', title:'AUTONOMOUS PRE-EMPTION',  start:105, end:120}
+  ];
+  function updateActBanner(t) {
+    var act=null;
+    for (var i=0;i<ACT_DEFS.length;i++) {
+      if (t>=ACT_DEFS[i].start && t<ACT_DEFS[i].end) { act=ACT_DEFS[i]; break; }
+    }
+    if (act) {
+      actNum.textContent=act.num; actTitle2.textContent=act.title;
+      actBanner.classList.add('show');
+    } else { actBanner.classList.remove('show'); }
+  }
+
+  // MASTER LOOP
+  var TOTAL=120;
+  var startTime=null, running=false, paused=false;
+  var pauseTime=0, totalPausedDuration=0;
+  var timelineFill   = document.getElementById('timelineFill');
+  var pauseIndicator = document.getElementById('pauseIndicator');
+
+  function resetAll() {
+    scopeBuf.length=0; firedCues={};
+    totalPausedDuration=0; paused=false;
+    captionEl.classList.remove('show');
+    telemBox.classList.remove('show');
+    actBanner.classList.remove('show');
+    hudBrand.classList.remove('show');
+    crEl.classList.remove('show');
+    [stepTag1,stepTag2,stepTag3,stepTag4].forEach(function(el){ el.classList.remove('show'); });
+    kpiWrap.classList.remove('show');
+    heroOutro.classList.remove('show');
+    if (pauseIndicator) pauseIndicator.classList.remove('show');
+    timelineFill.style.width='0%';
+  }
+
+  function togglePause() {
+    if (!running) return;
+    if (!paused) {
+      paused=true; pauseTime=performance.now();
+      pauseIndicator.classList.add('show');
+      if (actx && actx.state==='running') actx.suspend();
+    } else {
+      paused=false; totalPausedDuration+=performance.now()-pauseTime;
+      pauseIndicator.classList.remove('show');
+      if (actx && actx.state==='suspended') actx.resume();
+      requestAnimationFrame(frame);
+    }
+  }
+
+  function frame(now) {
+    if (!running||paused) return;
+    var elapsed=(now-startTime-totalPausedDuration)/1000;
+    if (elapsed>=TOTAL) {
+      drawBg(elapsed); act5(15);
+      timelineFill.style.width='100%';
+      setTimeout(function(){
+        running=false; resetAll();
+        document.getElementById('startOverlay').style.display='flex';
+      },2200);
+      return;
+    }
+    timelineFill.style.width=(elapsed/TOTAL*100)+'%';
+    audioCues.forEach(function(cue){
+      if (elapsed>=cue.t && !firedCues[cue.t]) { firedCues[cue.t]=true; cue.fn(); }
+    });
+    drawBg(elapsed);
+    updateCaption(elapsed);
+    updateActBanner(elapsed);
+    updateTelemetry(elapsed);
+    hudBrand.classList.add('show');
+    hideActOverlays(); // clear stale DOM state before act functions re-assert what should show
+
+    ctx.save();
+    ctx.translate(W*0.5,H*0.5);
+    ctx.scale(S,S);
+    ctx.translate(-W*0.5,-H*0.5);
+
+    if      (elapsed<25)  act1(elapsed);
+    else if (elapsed<50)  act2(elapsed-25);
+    else if (elapsed<80)  act3(elapsed-50);
+    else if (elapsed<105) act4(elapsed-80);
+    else                  act5(elapsed-105);
+
+    ctx.restore();
+    requestAnimationFrame(frame);
+  }
+
+  // EVENTS
+  document.getElementById('playBtn').addEventListener('click', function(){
+    ensureAudio();
+    if (actx && actx.state==='suspended') actx.resume();
+    document.getElementById('startOverlay').style.display='none';
+    resetAll(); running=true; paused=false;
+    startTime=performance.now();
+    requestAnimationFrame(frame);
+  });
+
+  function toggleFullscreen(){
+    var stage=document.getElementById('stage');
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      if (stage.requestFullscreen) stage.requestFullscreen().catch(function(){});
+      else if (stage.webkitRequestFullscreen) stage.webkitRequestFullscreen();
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen().catch(function(){});
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    }
+    setTimeout(resize,100);
+  }
+
+  document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
+  document.addEventListener('fullscreenchange', function(){
+    var btn=document.getElementById('fullscreenBtn');
+    btn.textContent=document.fullscreenElement?'\u2715':'\u26F6';
+    btn.title=document.fullscreenElement?'Exit Fullscreen (F)':'Toggle Fullscreen (F)';
+    resize();
+  });
+  // Strip all act-bound DOM overlays so no stale .show class persists across act boundaries
+  function hideActOverlays() {
+    crEl.classList.remove('show');
+    stepTag1.classList.remove('show');
+    stepTag2.classList.remove('show');
+    stepTag3.classList.remove('show');
+    stepTag4.classList.remove('show');
+    kpiWrap.classList.remove('show');
+    heroOutro.classList.remove('show');
+  }
+
+  function seek(delta) {
+    if (!running) return;
+    var refTime = paused ? pauseTime : performance.now();
+    var elapsed = (refTime - startTime - totalPausedDuration) / 1000;
+    var newElapsed = Math.max(0, Math.min(TOTAL - 0.05, elapsed + delta));
+    startTime = refTime - totalPausedDuration - newElapsed * 1000;
+    timelineFill.style.width = (newElapsed / TOTAL * 100) + '%';
+    // Re-arm audio cues that are now ahead of the new position (so they fire again on playback)
+    audioCues.forEach(function(cue) { if (cue.t >= newElapsed) delete firedCues[cue.t]; });
+    // When paused, render one static frame at the new position
+    if (paused) {
+      requestAnimationFrame(function() {
+        drawBg(newElapsed);
+        updateCaption(newElapsed);
+        updateActBanner(newElapsed);
+        updateTelemetry(newElapsed);
+        hudBrand.classList.add('show');
+        hideActOverlays(); // ensure no stale overlays from previous position
+        ctx.save();
+        ctx.translate(W*0.5,H*0.5); ctx.scale(S,S); ctx.translate(-W*0.5,-H*0.5);
+        if      (newElapsed<25)  act1(newElapsed);
+        else if (newElapsed<50)  act2(newElapsed-25);
+        else if (newElapsed<80)  act3(newElapsed-50);
+        else if (newElapsed<105) act4(newElapsed-80);
+        else                     act5(newElapsed-105);
+        ctx.restore();
+      });
+    }
+  }
+
+  window.addEventListener('keydown', function(e){
+    if (e.code==='Space'||e.key===' ') {
+      e.preventDefault();
+      running?togglePause():document.getElementById('playBtn').click();
+    } else if (e.key==='ArrowLeft') {
+      e.preventDefault(); seek(-5);
+    } else if (e.key==='ArrowRight') {
+      e.preventDefault(); seek(5);
+    } else if (e.key==='f'||e.key==='F') {
+      e.preventDefault(); toggleFullscreen();
+    }
+  });
+
+})();
+</script>
+</body>
+</html>

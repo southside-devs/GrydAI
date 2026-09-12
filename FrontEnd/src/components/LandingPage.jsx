@@ -1,16 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, CheckCircle2 } from 'lucide-react';
 import Navbar from './Navbar';
-import TelemetryCard from './dashboard/TelemetryCard';
+import VoltageTelemetryCard from './dashboard/VoltageTelemetryCard';
+import CurrentTelemetryCard from './dashboard/CurrentTelemetryCard';
 import StabilityIndexCard from './dashboard/StabilityIndexCard';
-import ImpactCard from './dashboard/ImpactCard';
 import TotalEnergyCard from './dashboard/TotalEnergyCard';
 import IsometricHospitalGrid from './dashboard/IsometricHospitalGrid';
 import AIDetectionBanner from './dashboard/AIDetectionBanner';
+import TransformerEventCard from './dashboard/TransformerEventCard';
+import AnalyticsView from './dashboard/AnalyticsView';
 
 export default function LandingPage({ onReplay, onReload }) {
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [isAnomaly, setIsAnomaly] = useState(false);
+  const [notification, setNotification] = useState(null);
+  const notifTimeoutRef = useRef(null);
 
   const [isConnected, setIsConnected] = useState(false);
 
@@ -27,6 +31,18 @@ export default function LandingPage({ onReplay, onReload }) {
   const [gridStatus, setGridStatus] = useState(0);
   const [aiMessage, setAiMessage] = useState('System Stable - Normal Feeder Telemetry');
   const [anomalyScore, setAnomalyScore] = useState(-0.75);
+
+  const handleReportEvent = () => {
+    if (notifTimeoutRef.current) clearTimeout(notifTimeoutRef.current);
+    setNotification({
+      title: 'Incident Reported',
+      message: 'Event logged and reported',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    });
+    notifTimeoutRef.current = setTimeout(() => {
+      setNotification(null);
+    }, 3500);
+  };
 
   useEffect(() => {
     let ws = null;
@@ -96,8 +112,8 @@ export default function LandingPage({ onReplay, onReload }) {
   }, []);
 
   return (
-    <div className="min-h-screen w-full bg-[#000000] text-slate-100 flex flex-col justify-between p-6 lg:p-10 relative overflow-hidden select-none">
-      {/* 1. UNIVERSAL NAVBAR (Dashboard, Analytics, Diagnostics) */}
+    <div className="min-h-screen w-full bg-[#000000] text-slate-100 flex flex-col justify-between p-3 xs:p-4 sm:p-6 lg:p-8 xl:p-10 relative overflow-x-hidden select-none">
+      {/* 1. UNIVERSAL NAVBAR (Dashboard, Analytics) */}
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -116,9 +132,10 @@ export default function LandingPage({ onReplay, onReload }) {
           }`}
         >
           <main className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-            <div className="lg:col-span-4 flex flex-col justify-center space-y-6">
-              <div className="space-y-4">
-                <h1 className="text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-[1.15] font-display">
+            {/* Left Info Column */}
+            <div className="lg:col-span-4 flex flex-col justify-center space-y-4 sm:space-y-6 text-center lg:text-left items-center lg:items-start">
+              <div className="space-y-3 sm:space-y-4">
+                <h1 className="text-2xl xs:text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-[1.15] font-display">
                   Real-Time{' '}
                   <span className="text-[#ffe600]">
                     Predictive
@@ -126,37 +143,54 @@ export default function LandingPage({ onReplay, onReload }) {
                   <br />
                   Grid Management
                 </h1>
-                <p className="text-sm lg:text-base text-[#94a3b8] leading-relaxed max-w-md font-normal">
+                <p className="text-xs xs:text-sm lg:text-base text-[#94a3b8] leading-relaxed max-w-md font-normal mx-auto lg:mx-0">
                   An AI Layer for Real-Time Power monitoring that flags grid failures minutes before they happen
                 </p>
               </div>
 
-              <div className="inline-flex items-center justify-between bg-[#0d121c] border border-white/[0.08] rounded-xl p-3.5 max-w-[270px]">
-                <div>
-                  <div className="text-[11px] font-mono tracking-widest text-[#64748b] uppercase font-semibold">
+              <div className="inline-flex items-center justify-between bg-[#0d121c] border border-white/[0.08] rounded-xl p-3 xs:p-3.5 w-full max-w-[270px]">
+                <div className="text-left">
+                  <div className="text-[10px] xs:text-[11px] font-mono tracking-widest text-[#64748b] uppercase font-semibold">
                     GRID ACTIVE
                   </div>
-                  <div className="text-base font-bold text-white font-display tracking-wide mt-0.5">
+                  <div className="text-sm xs:text-base font-bold text-white font-display tracking-wide mt-0.5">
                     ALIN M Hospital
                   </div>
                 </div>
-                <button className="w-8 h-8 rounded-lg bg-[#1e283d] border border-white/[0.1] flex items-center justify-center text-[#ffe600] hover:scale-105 transition-transform cursor-pointer">
+                <button className="w-7 xs:w-8 h-7 xs:h-8 rounded-lg bg-[#1e283d] border border-white/[0.1] flex items-center justify-center text-[#ffe600] hover:scale-105 transition-transform cursor-pointer">
                   <Plus size={16} />
                 </button>
               </div>
             </div>
 
-            <div className="lg:col-span-5 h-[380px] lg:h-[420px] flex items-center justify-center relative">
+            {/* Middle 3D Model Column */}
+            <div className="lg:col-span-5 h-[260px] xs:h-[300px] sm:h-[350px] lg:h-[420px] flex items-center justify-center relative w-full overflow-hidden">
               <IsometricHospitalGrid isAnomaly={isAnomaly} />
             </div>
 
-            <div className="lg:col-span-3 flex justify-end items-start">
-              <AIDetectionBanner
-                gridStatus={gridStatus}
-                confidence={gridStatus === 2 ? 98.4 : (gridStatus === 1 ? 87.2 : 0.0)}
-                message={aiMessage}
-                isAnomaly={gridStatus > 0}
-              />
+            {/* Right Detection & Event Column */}
+            <div className="lg:col-span-3 flex flex-col items-center lg:items-end gap-4 w-full">
+              <div className="w-full max-w-[260px] xs:max-w-[280px] sm:max-w-60 relative flex flex-col items-center">
+                <img
+                  src="/assets/pikachu.png"
+                  alt="Pikachu" 
+                  className="w-20 xs:w-24 h-auto object-contain block -mb-10 xs:-mb-12 translate-x-14 xs:translate-x-20 select-none pointer-events-none z-20 relative"
+                />
+                <AIDetectionBanner
+                  gridStatus={gridStatus}
+                  confidence={gridStatus === 2 ? 98.4 : (gridStatus === 1 ? 87.2 : 0.0)}
+                  message={aiMessage}
+                  isAnomaly={gridStatus > 0}
+                />
+              </div>
+              <div className="w-full max-w-[260px] xs:max-w-[280px] sm:max-w-60">
+                <TransformerEventCard
+                  transformerId="TX-02"
+                  time="00:00"
+                  nodeLabel="LV Winding Phase-B"
+                  onReport={handleReportEvent}
+                />
+              </div>
             </div>
           </main>
         </div>
@@ -169,108 +203,58 @@ export default function LandingPage({ onReplay, onReload }) {
               : 'opacity-0 translate-y-4 pointer-events-none hidden'
           }`}
         >
-          <div className="bg-[#0c1017] border border-white/[0.08] rounded-3xl p-8 max-w-4xl mx-auto relative overflow-hidden">
-            <div className="flex items-center justify-between border-b border-white/[0.06] pb-4 mb-6">
-              <div>
-                <span className="text-[10px] font-mono tracking-widest text-[#ffe600] uppercase font-bold">
-                  TELEMETRY INTELLIGENCE // ANALYTICS
-                </span>
-                <h2 className="text-2xl font-bold font-display text-white mt-1">
-                  Grid Frequency & Phase Analytics
-                </h2>
-              </div>
-              <div className="px-3 py-1 rounded-full bg-[#ffe600]/10 border border-[#ffe600]/30 text-[#ffe600] text-xs font-mono">
-                SIGNAL ARCHIVE • ZERO-DATA MODE
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.05]">
-                <div className="text-xs text-[#94a3b8]">Sampling Rate</div>
-                <div className="text-xl font-mono font-bold text-white mt-1">0 kS/s</div>
-              </div>
-              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.05]">
-                <div className="text-xs text-[#94a3b8]">THD (Harmonic Distortion)</div>
-                <div className="text-xl font-mono font-bold text-white mt-1">0.00%</div>
-              </div>
-              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.05]">
-                <div className="text-xs text-[#94a3b8]">Peak Divergence</div>
-                <div className="text-xl font-mono font-bold text-white mt-1">0.0 ms</div>
-              </div>
-            </div>
-            <div className="h-44 w-full rounded-xl bg-[#080b11] border border-white/[0.05] p-4 flex flex-col justify-between">
-              <div className="flex justify-between text-[11px] font-mono text-[#64748b]">
-                <span>AWAITING STREAMING BUFFER</span>
-                <span>FFT SPECTRUM: INACTIVE</span>
-              </div>
-              <div className="flex items-center justify-center text-xs font-mono text-[#475569]">
-                Connecting to GrydAI Telemetry WebSocket daemon...
-              </div>
-              <div className="flex justify-between text-[10px] font-mono text-[#334155]">
-                <span>0 Hz</span>
-                <span>25 Hz</span>
-                <span>50 Hz</span>
-                <span>75 Hz</span>
-                <span>100 Hz</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* DIAGNOSTICS VIEW */}
-        <div
-          className={`w-full transition-all duration-750 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-            activeTab === 'Diagnostics'
-              ? 'opacity-100 translate-y-0 pointer-events-auto'
-              : 'opacity-0 translate-y-4 pointer-events-none hidden'
-          }`}
-        >
-          <div className="bg-[#0c1017] border border-white/[0.08] rounded-3xl p-8 max-w-4xl mx-auto relative overflow-hidden">
-            <div className="flex items-center justify-between border-b border-white/[0.06] pb-4 mb-6">
-              <div>
-                <span className="text-[10px] font-mono tracking-widest text-[#06b6d4] uppercase font-bold">
-                  HARDWARE HEALTH // DIAGNOSTICS
-                </span>
-                <h2 className="text-2xl font-bold font-display text-white mt-1">
-                  Substation Node Health
-                </h2>
-              </div>
-              <div className="px-3 py-1 rounded-full bg-[#06b6d4]/10 border border-[#06b6d4]/30 text-[#06b6d4] text-xs font-mono">
-                DIAGNOSTIC BUS • READY
-              </div>
-            </div>
-            <div className="space-y-3">
-              {[
-                { name: 'Feeder Sub-Transformer 01', status: 'Standby', code: 'NODE_0x00' },
-                { name: 'Hospital Critical Circuit Backup', status: 'Standby', code: 'NODE_0x01' },
-                { name: 'Solar PV Inverter Coupling', status: 'Standby', code: 'NODE_0x02' },
-                { name: 'Lithium BESS Energy Storage Link', status: 'Standby', code: 'NODE_0x03' },
-              ].map((node) => (
-                <div key={node.name} className="flex items-center justify-between p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:border-white/[0.1] transition-all">
-                  <div className="flex items-center gap-3">
-                    <span className="w-2 h-2 rounded-full bg-[#64748b]" />
-                    <span className="text-sm font-medium text-white">{node.name}</span>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs font-mono">
-                    <span className="text-[#64748b]">{node.code}</span>
-                    <span className="px-2 py-0.5 rounded bg-white/[0.05] text-[#94a3b8]">{node.status}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <AnalyticsView />
         </div>
       </div>
 
-      {/* 3. BOTTOM TELEMETRY DOCK */}
-      <footer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 z-20 mt-2">
-        <TelemetryCard telemetry={telemetry} />
-        <StabilityIndexCard
-          stability={stability}
-          status={gridStatus === 2 ? 'Critical' : (gridStatus === 1 ? 'Warning' : 'Standby')}
-        />
-        <ImpactCard earning={0.00} co2SavedKm="0" co2OffsetMt="0.0" />
-        <TotalEnergyCard percentage={energyPercent} currentKw={currentKw} limitKw={8} />
-      </footer>
+      {/* 3. BOTTOM TELEMETRY DOCK (Shown on Dashboard tab) */}
+      {activeTab === 'Dashboard' && (
+        <footer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 z-20 mt-4 sm:mt-2">
+          <VoltageTelemetryCard
+            voltage={telemetry.voltage}
+            frequency={telemetry.frequency}
+            waveform={telemetry.waveform}
+          />
+          <CurrentTelemetryCard
+            current={telemetry.current}
+            frequency={telemetry.frequency}
+            waveform={telemetry.waveform}
+          />
+          <StabilityIndexCard
+            stability={stability}
+            status={gridStatus === 2 ? 'Critical' : (gridStatus === 1 ? 'Warning' : 'Standby')}
+          />
+          <TotalEnergyCard
+            percentage={energyPercent}
+            currentKw={currentKw}
+            limitKw={8}
+          />
+        </footer>
+      )}
+
+      {/* 4. BOTTOM-RIGHT AUTO-DISMISSING REPORT NOTIFICATION */}
+      {notification && (
+        <div
+          className="fixed bottom-6 right-6 z-50 bg-[#ffe600] text-black px-4 py-3.5 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.8)] flex items-start gap-3 max-w-sm animate-in fade-in slide-in-from-bottom-5 duration-300 pointer-events-auto border border-[#ffd700]"
+        >
+          <div className="w-8 h-8 rounded-xl bg-black/10 flex items-center justify-center text-black shrink-0 mt-0.5">
+            <CheckCircle2 size={18} strokeWidth={2.5} />
+          </div>
+          <div className="flex-1 min-w-0 font-mono text-left">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-black text-black tracking-tight">
+                {notification.title}
+              </span>
+              <span className="text-[10px] text-black/70 font-semibold">
+                {notification.time}
+              </span>
+            </div>
+            <p className="text-[11px] text-black/90 font-medium mt-0.5 leading-snug">
+              {notification.message}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

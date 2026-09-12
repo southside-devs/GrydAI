@@ -19,14 +19,14 @@ export default function LoadingScreen({ onComplete }) {
   const logoRef = useRef(null);
 
   useEffect(() => {
-    const t0 = setTimeout(() => setPhase(PHASE_BOOT), 300);
-    const t1 = setTimeout(() => setStatusIdx(0), 500);
-    const t2 = setTimeout(() => { setStatusIdx(1); setProgress(45); }, 900);
-    const t3 = setTimeout(() => { setStatusIdx(2); setProgress(85); }, 1300);
+    const t0 = setTimeout(() => setPhase(PHASE_BOOT), 200);
+    const t1 = setTimeout(() => { setStatusIdx(0); setProgress(25); }, 500);
+    const t2 = setTimeout(() => { setStatusIdx(1); setProgress(65); }, 1200);
+    const t3 = setTimeout(() => { setStatusIdx(2); setProgress(95); }, 1900);
     const t4 = setTimeout(() => {
       setPhase(PHASE_READY);
       setProgress(100);
-    }, 1600);
+    }, 2400);
     const t5 = setTimeout(() => {
       setPhase(PHASE_COLLAPSE);
       setTimeout(() => {
@@ -36,8 +36,8 @@ export default function LoadingScreen({ onComplete }) {
           coords = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
         }
         onComplete(coords);
-      }, 300);
-    }, 1900);
+      }, 400);
+    }, 2800);
 
     return () => [t0, t1, t2, t3, t4, t5].forEach(clearTimeout);
   }, [onComplete]);
@@ -101,7 +101,8 @@ export default function LoadingScreen({ onComplete }) {
             src="/assets/Clean BG.png"
             alt="GrydAI"
             style={{
-              width: '400px',
+              width: '520px',
+              maxWidth: '90vw',
               height: 'auto',
               objectFit: 'contain',
             }}

@@ -71,46 +71,44 @@ export default function Navbar({
   }, []);
 
   return (
-    <header className="h-12 flex items-center justify-between z-30 mb-4 relative select-none">
+    <header className="min-h-12 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 z-30 mb-4 relative select-none">
       {/* Left: GrydAI Brand Mark (Click to reload landing page) */}
-      <div className="relative h-12 flex items-center min-w-[340px]">
+      <div className="relative h-14 sm:h-16 md:h-20 flex items-center min-w-0 shrink-0">
         <button
           onClick={onReload}
           title="GrydAI — Intelligent Microgrid Defense"
-          className="interactive-target absolute left-0 top-1/2 -translate-y-1/2 p-0 m-0 border-0 bg-transparent text-left focus:outline-none group cursor-pointer"
+          className="interactive-target relative p-0 m-0 border-0 bg-transparent text-left focus:outline-none group cursor-pointer flex items-center"
         >
           <img
             src="/assets/Clean BG.png"
             alt="GrydAI"
-            className="h-60 w-auto max-w-[620px] object-contain group-hover:scale-105 transition-all duration-300"
+            className="h-14 xs:h-16 sm:h-20 md:h-28 lg:h-44 xl:h-52 w-auto max-w-[200px] xs:max-w-[240px] sm:max-w-[320px] md:max-w-[420px] lg:max-w-[500px] object-contain group-hover:scale-105 transition-all duration-300"
           />
         </button>
       </div>
 
       {/* Navigation Tabs with Solid Sliding Ease Indicator */}
-      <nav className="relative flex items-center bg-[#0d121c] border border-white/[0.08] rounded-full p-1 overflow-hidden">
+      <nav className="relative flex items-center bg-[#0d121c] border border-white/[0.08] rounded-full p-1 overflow-hidden order-3 sm:order-2 mx-auto sm:mx-0">
         {/* Animated Solid Gliding Pill */}
         <div
           className="absolute top-1 bottom-1 rounded-full bg-white/[0.08] border border-white/[0.18] transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] pointer-events-none"
           style={{
-            width: 'calc((100% - 8px) / 3)',
+            width: 'calc((100% - 8px) / 2)',
             transform: `translateX(${
               activeTab === 'Dashboard'
                 ? '0%'
-                : activeTab === 'Analytics'
-                ? '100%'
-                : '200%'
+                : '100%'
             })`,
           }}
         />
 
-        {['Dashboard', 'Analytics', 'Diagnostics'].map((tab) => {
+        {['Dashboard', 'Analytics'].map((tab) => {
           const isActive = activeTab === tab;
           return (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`relative z-10 px-7 py-2.5 rounded-full text-base font-medium transition-colors duration-500 cursor-pointer ${
+              className={`relative z-10 px-4 xs:px-5 sm:px-6 md:px-7 py-1.5 xs:py-2 sm:py-2.5 rounded-full text-xs xs:text-sm sm:text-base font-medium transition-colors duration-500 cursor-pointer ${
                 isActive
                   ? 'text-white font-bold'
                   : 'text-[#94a3b8] hover:text-white'
@@ -123,24 +121,25 @@ export default function Navbar({
       </nav>
 
       {/* Right Action Cluster & Connection Status */}
-      <div className="flex items-center gap-3.5">
+      <div className="flex items-center gap-2 xs:gap-3 sm:gap-3.5 order-2 sm:order-3 ml-auto sm:ml-0">
         {/* SIM / Hardware Connection Status (Live WebSocket State) */}
         <div
-          className={`flex items-center gap-2.5 text-sm font-mono px-4.5 py-2.5 rounded-full border transition-all duration-500 cursor-default select-none ${
+          className={`flex items-center gap-1.5 xs:gap-2 sm:gap-2.5 text-xs sm:text-sm font-mono px-2.5 xs:px-3 sm:px-4.5 py-1.5 xs:py-2 sm:py-2.5 rounded-full border transition-all duration-500 cursor-default select-none ${
             isConnected
               ? 'bg-[#10b981]/15 border-[#10b981]/40 text-[#10b981]'
               : 'bg-[#ef4444]/15 border-[#ef4444]/40 text-[#ef4444]'
           }`}
         >
           <span
-            className={`w-3 h-3 rounded-full transition-all duration-300 ${
+            className={`w-2 xs:w-2.5 sm:w-3 h-2 xs:h-2.5 sm:h-3 rounded-full shrink-0 transition-all duration-300 ${
               isConnected
                 ? 'bg-[#10b981]'
                 : 'bg-[#ef4444] animate-pulse'
             }`}
           />
-          <span className="font-bold tracking-wider text-sm">
-            {isConnected ? 'SIM: CONNECTED' : 'SIM: DISCONNECTED'}
+          <span className="font-bold tracking-wider text-[11px] xs:text-xs sm:text-sm">
+            <span className="inline md:hidden">{isConnected ? 'SIM' : 'OFF'}</span>
+            <span className="hidden md:inline">{isConnected ? 'SIM: CONNECTED' : 'SIM: DISCONNECTED'}</span>
           </span>
         </div>
 
@@ -149,11 +148,12 @@ export default function Navbar({
           <button
             onClick={() => setShowNotifications((prev) => !prev)}
             title="System Activity & Alerts"
-            className="w-11 h-11 rounded-full bg-[#0d121c] hover:bg-[#151c2c] border border-white/[0.08] hover:border-[#ffe600]/40 flex items-center justify-center text-[#94a3b8] hover:text-white transition-colors relative cursor-pointer focus:outline-none"
+            className="w-8 xs:w-9 sm:w-11 h-8 xs:h-9 sm:h-11 rounded-full bg-[#0d121c] hover:bg-[#151c2c] border border-white/[0.08] hover:border-[#ffe600]/40 flex items-center justify-center text-[#94a3b8] hover:text-white transition-colors relative cursor-pointer focus:outline-none"
           >
-            <Bell size={18} />
+            <Bell size={16} className="sm:hidden" />
+            <Bell size={18} className="hidden sm:block" />
             {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-[#ffe600] text-[#080b11] text-[10px] font-mono font-black rounded-full flex items-center justify-center ring-2 ring-[#080b11]">
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 xs:w-4.5 xs:h-4.5 bg-[#ffe600] text-[#080b11] text-[9px] xs:text-[10px] font-mono font-black rounded-full flex items-center justify-center ring-2 ring-[#080b11]">
                 {unreadCount}
               </span>
             )}
@@ -161,7 +161,7 @@ export default function Navbar({
 
           {/* Activity Notifications Popup */}
           {showNotifications && (
-            <div className="absolute right-0 top-14 w-88 sm:w-96 rounded-2xl bg-[#0c1017] border border-white/[0.14] p-5 z-50 animate-in fade-in zoom-in-95 duration-200 text-left">
+            <div className="absolute right-0 top-11 sm:top-14 w-[calc(100vw-32px)] max-w-sm sm:w-96 rounded-2xl bg-[#0c1017] border border-white/[0.14] p-4 sm:p-5 z-50 animate-in fade-in zoom-in-95 duration-200 text-left shadow-2xl">
               {/* Header */}
               <div className="flex items-center justify-between pb-3.5 border-b border-white/[0.08]">
                 <div className="flex items-center gap-2.5">
@@ -253,14 +253,14 @@ export default function Navbar({
           <button
             onClick={() => setShowProfile((prev) => !prev)}
             title="Supervisor Profile"
-            className="w-11 h-11 rounded-full bg-[#1e283d] hover:bg-[#283552] border border-white/[0.15] hover:border-[#ffe600]/50 flex items-center justify-center text-base font-mono font-bold text-white transition-all duration-200 cursor-pointer focus:outline-none"
+            className="w-8 xs:w-9 sm:w-11 h-8 xs:h-9 sm:h-11 rounded-full bg-[#1e283d] hover:bg-[#283552] border border-white/[0.15] hover:border-[#ffe600]/50 flex items-center justify-center text-xs xs:text-sm sm:text-base font-mono font-bold text-white transition-all duration-200 cursor-pointer focus:outline-none"
           >
             AM
           </button>
 
           {/* Simple Clean Profile Popup */}
           {showProfile && (
-            <div className="absolute right-0 top-14 w-88 sm:w-96 rounded-2xl bg-[#0c1017] border border-white/[0.14] p-5 z-50 animate-in fade-in zoom-in-95 duration-200 text-left">
+            <div className="absolute right-0 top-11 sm:top-14 w-[calc(100vw-32px)] max-w-sm sm:w-96 rounded-2xl bg-[#0c1017] border border-white/[0.14] p-4 sm:p-5 z-50 animate-in fade-in zoom-in-95 duration-200 text-left shadow-2xl">
               {/* Operator Header */}
               <div className="flex items-center gap-3.5 pb-4 border-b border-white/[0.08]">
                 <div className="w-16 h-16 rounded-full bg-[#ffe600]/20 border border-[#ffe600]/60 flex items-center justify-center font-mono font-bold text-xl text-[#ffe600] shrink-0">

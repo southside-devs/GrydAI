@@ -12,7 +12,7 @@ export default function AIDetectionBanner({
   // Derive effective status (0: Normal, 1: Warning, 2: Critical)
   const effectiveStatus = gridStatus !== undefined ? gridStatus : (isAnomaly ? 1 : 0);
 
-  // Status 2: CRITICAL (Red)
+  // Status 2: CRITICAL (Solid Red)
   if (effectiveStatus === 2) {
     const displayTitle = title || (message.includes('Line Break') ? 'Line Break Trip' : (message.includes('Overload') ? 'Feeder Overload' : 'Critical Fault'));
     const displaySubtitle = message || 'CRITICAL: Severe Feeder Risk';
@@ -25,7 +25,7 @@ export default function AIDetectionBanner({
             <AlertOctagon size={20} className="text-white" />
           </div>
           <span className="text-xs font-mono font-bold tracking-tight bg-white/20 px-2.5 py-1 rounded-md">
-            {displayConf.toFixed(1)}%
+            {typeof displayConf === 'number' ? displayConf.toFixed(1) : displayConf}%
           </span>
         </div>
 
@@ -55,7 +55,7 @@ export default function AIDetectionBanner({
     );
   }
 
-  // Status 1: WARNING (Yellow)
+  // Status 1: WARNING (Solid Yellow)
   if (effectiveStatus === 1) {
     const displayTitle = title || (message.includes('EV Surge') || message.includes('Feeder Demand') ? 'EV Surge Detected' : (message.includes('Sag') ? 'Voltage Sag' : 'Grid Warning'));
     const displaySubtitle = message || 'Warning: Abnormal Feeder Micro-Fluctuation';
@@ -68,7 +68,7 @@ export default function AIDetectionBanner({
             <AlertTriangle size={20} className="text-[#0f172a]" />
           </div>
           <span className="text-xs font-mono font-bold tracking-tight bg-black/10 px-2.5 py-1 rounded-md">
-            {displayConf.toFixed(1)}%
+            {typeof displayConf === 'number' ? displayConf.toFixed(1) : displayConf}%
           </span>
         </div>
 
