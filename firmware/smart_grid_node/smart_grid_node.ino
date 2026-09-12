@@ -15,7 +15,7 @@
   * Digital Output (Status Green):   Pin D25 (390 Ohm resistor to LED)
   * Digital Output (Status Yellow):  Pin D26 (390 Ohm resistor to LED)
   * Digital Output (Status Red):     Pin D27 (390 Ohm resistor to LED)
-  * Digital Output (Alert Buzzer):   Pin D18 (1k Ohm resistor to KC-1206 Buzzer)
+  * Digital Output (Alert Buzzer):   Pin D18 (Direct to KC-1206 Buzzer)
   * I2C Bus (SSD1306 128x64 OLED):   SDA on Pin D21, SCL on Pin D22
 
   Protocol Contracts:
@@ -245,9 +245,9 @@ void setup() {
   pinMode(PIN_LED_RED, OUTPUT);
   pinMode(PIN_BUZZER, OUTPUT);
   
-  // Startup test chirp: 2048 Hz tone on boot to verify buzzer wiring & frequency response
-  tone(PIN_BUZZER, 2048, 100);
-  delay(120);
+  // Startup test chirp: 2400 Hz resonant frequency tone on boot
+  tone(PIN_BUZZER, 2400, 150);
+  delay(180);
   noTone(PIN_BUZZER);
   digitalWrite(PIN_BUZZER, LOW);
 
@@ -341,11 +341,12 @@ void loop() {
   // 4. Fail-Safe Offline Keepalive Check
   // When backend heartbeat is not received, updateOledDisplay() manages autonomous local status.
 
-  // 5. Critical Alert Buzzer (Soft 80ms non-blocking tone pulse every 1000ms)
+  // 5. Critical Alert Buzzer: Resonant 2400 Hz dual-chirp alarm pattern
   if (aiStatus == 2 || cachedFaultBtn == HIGH) {
     unsigned long buzzerCycle = currentMillis % 1000;
-    if (buzzerCycle < 80) {
-      tone(PIN_BUZZER, 2048);
+    // Dual-chirp pattern: 0-100ms BEEP, 100-180ms SILENCE, 180-280ms BEEP, 280-1000ms SILENCE
+    if ((buzzerCycle < 100) || (buzzerCycle >= 180 && buzzerCycle < 280)) {
+      tone(PIN_BUZZER, 2400); // 2400 Hz hits the mechanical resonant peak for full volume
     } else {
       noTone(PIN_BUZZER);
       digitalWrite(PIN_BUZZER, LOW);
