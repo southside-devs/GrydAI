@@ -64,14 +64,22 @@ smart-grid-node/
 *   **Concurrency Model:** 
     *   FastAPI runs asynchronously via Uvicorn.
     *   `pyserial.Serial` reader runs in a dedicated background `threading.Thread` or `asyncio.to_thread()` to prevent locking up the async WebSocket loop.
-*   **ML Pipeline (Scikit-Learn Hybrid):** 
-    *   **Feature Extraction:** Rolling window (e.g. 10 samples / 1 second) computing $[V_{\text{sim}}, I_{\text{sim}}, \Delta V, \Delta I, \text{Solar}]$.
-    *   **Autoencoder:** Lightweight Scikit-Learn `MLPRegressor` (e.g., hidden layers `(8, 3, 8)`) trained on baseline "healthy" data.
-    *   **Reconstruction Metric:** Mean Squared Error (MSE) between input and reconstruction $\frac{1}{N}\sum (\mathbf{x} - \mathbf{\hat{x}})^2$.
-    *   **Anomaly Trigger:** Calibrated baseline statistics ($\mu_{\text{MSE}}$, $\sigma_{\text{MSE}}$) combined with `IsolationForest`:
-        *   Status `0` (Normal / Green): $\text{MSE} \le \mu + 2\sigma$
-        *   Status `1` (Warning / Yellow): $\mu + 2\sigma < \text{MSE} \le \mu + 3.5\sigma$
-        *   Status `2` (Critical / Red): $\text{MSE} > \mu + 3.5\sigma$ or `fault_btn == 1`
+*   **ML Pipeline (Scikit-Learn Autoencoder & Hybrid Decision Engine):** 
+    *   **Feature Extraction:** Telemetry window computing 4 core electrical features: $[V_{\text{sim}}, I_{\text{sim}}, \Delta V, \Delta I]$.
+        *   *Solar Decoupling Note:* `solar_efficiency` is streamed as auxiliary telemetry but is decoupled from the core transformer Autoencoder vector. This prevents floating pin noise or natural nighttime solar drop-offs from triggering false transformer health alarms.
+    *   **Autoencoder Architecture:** Lightweight Scikit-Learn `MLPRegressor` (`hidden_layer_sizes=(8, 3, 8)`, `relu`, `adam`) pre-trained on realistic grid distribution ($V \in [215\text{V}, 225\text{V}]$, $I \in [11\text{A}, 18\text{A}]$) for instant zero-wait startup.
+    *   **Reconstruction Metric & Z-Score:** Computes Mean Squared Error (MSE) $\frac{1}{N}\sum (\mathbf{x} - \mathbf{\hat{x}})^2$ and standardizes to calibrated baseline: $Z = \frac{\text{MSE} - \mu_{\text{MSE}}}{\sigma_{\text{MSE}}}$.
+    *   **Two-Tier Decision Engine:**
+        *   *Tier 1: Instant Emergency Override:* `fault_btn == 1` trips Status 2 (Critical / Red) instantly with 0ms debouncing.
+        *   *Tier 2: Physical Electrical Thresholds + Autoencoder Z-Score:*
+            *   **Status 2 (Critical / Red):** $I_{\text{sim}} > 23.0\text{A}$ (Severe Overcurrent / EV Surge), $V_{\text{sim}} < 198.0\text{V}$ (Severe Winding Sag / Brownout), $V_{\text{sim}} > 242.0\text{V}$ (Overvoltage Surge), or $Z > 3.5$ (Severe Waveform Distortion).
+            *   **Status 1 (Warning / Yellow):** $I_{\text{sim}} > 18.5\text{A}$ (Abnormal Current Surge), $V_{\text{sim}} < 210.0\text{V}$ or $V_{\text{sim}} > 230.0\text{V}$ (Voltage Fluctuation), or $Z > 2.0$ (Statistical Anomaly).
+            *   **Status 0 (Normal / Green):** Nominal feeder band ($198\text{V} \le V \le 230\text{V}$, $I \le 18.5\text{A}$, $Z \le 2.0$).
+    *   **Anti-Flicker Consensus Filter:** Uses a rolling 3-sample buffer with 2-sample majority consensus (`Counter`) to eliminate single-sample ADC thermal noise jitter at decision boundaries. Emergency button bypasses filter for immediate trip.
+    *   **Continuous Anomaly Score Mapping:**
+        *   *Normal:* Bounded between $-1.00$ and $-0.65$ (nominal resting ~ $-0.85$).
+        *   *Warning:* Mapped between $+0.20$ and $+0.50$.
+        *   *Critical:* Mapped between $+0.75$ and $+1.00$ ($1.00$ on physical button trip).
 *   **Reverse Control to Hardware:**
     *   When status changes or at 2Hz heartbeat, backend sends `S:<grid_status>:<anomaly_score>\n` to ESP32 over serial.
 

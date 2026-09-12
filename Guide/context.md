@@ -54,11 +54,17 @@ The project explicitly avoids using live AC mains voltage (like ZMPT101B or ACS7
 * **Prototyping Materials:** 830-point breadboard, 25x Male-to-Male (M-M) jumper wires, 15x Female-to-Male (F-M) jumper wires. Data-sync USB cable.
 * **Hardware Quirk Note for Team:** We have four 390Ω resistors. Three will be used to protect the LEDs. The fourth 390Ω resistor will function as the pull-down resistor for the push button (standard is 10kΩ, but 390Ω is safely within the ESP32's current limits).
 
-## 5. Machine Learning Strategy (Unsupervised Anomaly Detection)
-* **Feature Extraction:** A rolling 10-sample window (1 second) computing $[V_{\text{sim}}, I_{\text{sim}}, \Delta V, \Delta I, \text{Solar}]$.
-* **Training Phase (The Autoencoder):** Dynamic rapid calibration. The hardware runs normally (without turning the dials) to stream a "healthy" baseline. An `MLPRegressor` autoencoder trains in 1–2 seconds to learn the reconstruction of healthy patterns.
-* **Detection Phase (Reconstruction Error):** The Autoencoder reconstructs the live time-series feature vector. When a dial is turned (simulating a micro-fluctuation or fault), reconstruction error (MSE) spikes immediately.
-* **The Trigger (Dynamic Z-Score & Isolation Forest):** The system evaluates the MSE against calibrated baseline statistics ($\mu \pm 2\sigma, 3.5\sigma$) and an Isolation Forest, flagging warnings (Yellow / Status 1) or critical faults (Red / Status 2) in < 50ms.
+## 5. Machine Learning Strategy (Unsupervised Anomaly Detection & Hybrid Safeguards)
+* **Feature Extraction:** Evaluates 4 core electrical parameters $[V_{\text{sim}}, I_{\text{sim}}, \Delta V, \Delta I]$ in real-time. Solar irradiance is tracked as auxiliary telemetry but is decoupled from the transformer health Autoencoder to prevent floating-pin or nightfall false alarms.
+* **Pre-Trained & Dynamic Autoencoder:** Pre-trained on startup across nominal feeder operating bands ($215\text{V} - 225\text{V}$, $11\text{A} - 18\text{A}$) using a Scikit-Learn `MLPRegressor(hidden_layer_sizes=(8, 3, 8))`. Dynamic recalibration (`POST /api/calibrate`) is available on-demand.
+* **Detection Phase (Reconstruction Error):** The Autoencoder reconstructs the live telemetry vector. Any voltage sag, over-current surge, or harmonic rate-of-change distortion causes Reconstruction Mean Squared Error (MSE) to spike immediately.
+* **Dual-Tier Decision Engine:**
+  * **Emergency Override:** Push button (`fault_btn == 1`) trips immediate Status 2 (Critical / Red) in $< 10\text{ms}$.
+  * **Physical Safeguards + Statistical Z-Score ($Z = \frac{\text{MSE} - \mu}{\sigma}$):**
+    * **Critical (Red):** $I > 23.0\text{A}$ (EV Overload/Short), $V < 198.0\text{V}$ (Winding Sag/Brownout), $V > 242.0\text{V}$ (Surge), or $Z > 3.5$.
+    * **Warning (Yellow):** $I > 18.5\text{A}$ (Current Surge), $V < 210.0\text{V}$ or $V > 230.0\text{V}$ (Voltage Fluctuation), or $Z > 2.0$.
+    * **Normal (Green):** Within nominal electrical envelope and $Z \le 2.0$.
+* **Anti-Flicker Consensus Filter:** Requires 2 consecutive samples of agreement before shifting operational state, eliminating ADC thermal noise jitter at boundary transitions. Emergency button trips instantly.
 
 ## 6. Live Pitch Choreography & Judge Defense (For Context Alignment)
 

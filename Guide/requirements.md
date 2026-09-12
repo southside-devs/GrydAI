@@ -96,17 +96,35 @@ flowchart LR
 * **Hardware Mode (Default):** `python main.py` (auto-detects connected ESP32 USB COM port or accepts `--port COMx`).
 * **Mock / Simulation Mode:** `python main.py --mock` runs fully decoupled without physical hardware, generating synthetic 10 Hz telemetry for frontend testing.
 
-### 4.3 Machine Learning Pipeline (Scikit-Learn Autoencoder)
-* **Architecture:** Scikit-Learn `MLPRegressor` configured as an Autoencoder (`hidden_layer_sizes=(8, 3, 8)`, activation='relu').
-* **Input Feature Vector (10-sample rolling window):**
-  $$\mathbf{x} = [V_{\text{sim}}, I_{\text{sim}}, \Delta V, \Delta I, \text{Solar}]$$
-* **Reconstruction Metric:** Mean Squared Error (MSE) between input $\mathbf{x}$ and reconstructed output $\mathbf{\hat{x}}$:
-  $$\text{MSE} = \frac{1}{N} \sum_{i=1}^{N} (x_i - \hat{x}_i)^2$$
-* **Rapid Baseline Calibration:** An endpoint (`POST /api/calibrate`) samples 5 seconds of resting telemetry to compute baseline mean ($\mu_{\text{MSE}}$) and standard deviation ($\sigma_{\text{MSE}}$).
-* **Anomaly Decision Rules:**
-  * **Status `0` (Normal / Green):** $\text{MSE} \le \mu + 2.0\sigma$
-  * **Status `1` (Warning / Yellow):** $\mu + 2.0\sigma < \text{MSE} \le \mu + 3.5\sigma$
-  * **Status `2` (Critical / Red):** $\text{MSE} > \mu + 3.5\sigma$ OR `fault_btn == 1`
+### 4.3 Machine Learning Pipeline (Scikit-Learn Autoencoder & Decision Engine)
+* **Architecture:** Scikit-Learn `MLPRegressor` configured as an Autoencoder (`hidden_layer_sizes=(8, 3, 8)`, activation='relu', solver='adam') pre-trained on realistic grid distribution ($V \in [215\text{V}, 225\text{V}]$, $I \in [11\text{A}, 18\text{A}]$) for instant zero-wait startup.
+* **Input Feature Vector (Rolling Window):**
+  $$\mathbf{x} = [V_{\text{sim}}, I_{\text{sim}}, \Delta V, \Delta I]$$
+  * **Solar Decoupling Architecture:** Solar efficiency (`solar_efficiency` / `solar_ldr`) is preserved in Contract 1 and 2 for operator dashboard telemetry, but is intentionally decoupled from the core transformer Autoencoder vector. This prevents floating analog pin noise or natural nighttime solar drop-offs from triggering false transformer health alarms.
+* **Reconstruction Metric & Z-Score:**
+  $$\text{MSE} = \frac{1}{N} \sum_{i=1}^{N} (x_i - \hat{x}_i)^2, \quad Z = \frac{\text{MSE} - \mu_{\text{MSE}}}{\sigma_{\text{MSE}}}$$
+* **Rapid Baseline Calibration:** An endpoint (`POST /api/calibrate`) samples resting telemetry to compute baseline mean ($\mu_{\text{MSE}}$) and standard deviation ($\sigma_{\text{MSE}}$), ensuring $\sigma_{\text{MSE}} \ge 0.010$ to prevent noise hypersensitivity.
+* **Dual-Tier Anomaly Decision Engine:**
+  * **Tier 1 (Instant Emergency Trip):** If `fault_btn == 1` (instantaneous line break), bypass all debounce filters and immediately output Status `2` (Critical / Red) and score `1.00`.
+  * **Tier 2 (Physical Electrical Boundaries & Statistical Z-Score):**
+    * **Status `2` (Critical / Red):**
+      * $I_{\text{sim}} > 23.0\text{A}$ (Severe Overcurrent / EV Surge), OR
+      * $V_{\text{sim}} < 198.0\text{V}$ (Severe Transformer Winding Sag / Brownout Collapse), OR
+      * $V_{\text{sim}} > 242.0\text{V}$ (Over-Voltage Surge & Distortion), OR
+      * $Z > 3.5$ (Severe Waveform Reconstruction Anomaly).
+    * **Status `1` (Warning / Yellow):**
+      * $I_{\text{sim}} > 18.5\text{A}$ (Abnormal Current Surge), OR
+      * $V_{\text{sim}} < 210.0\text{V}$ OR $V_{\text{sim}} > 230.0\text{V}$ (Grid Voltage Sag / Fluctuation), OR
+      * $Z > 2.0$ (Statistical Anomaly Detected).
+    * **Status `0` (Normal / Green):**
+      * Nominal operational band ($198\text{V} \le V_{\text{sim}} \le 230\text{V}$ and $I_{\text{sim}} \le 18.5\text{A}$) AND $Z \le 2.0$.
+* **Anti-Flicker Consensus Filter (Debouncing):**
+  * Evaluates a rolling 3-sample buffer requiring 2-sample majority consensus to switch states. Prevents single-sample ADC thermal noise from causing LED/UI flickering near the $Z = 2.0$ or $Z = 3.5$ decision boundaries. Emergency button press immediately overrides the buffer.
+* **Continuous Anomaly Score Mapping:**
+  * Smooth monotonic mapping between $-1.00$ (optimal stability) and $+1.00$ (catastrophic failure):
+    * **Normal Range ($Z \le 1.0$):** Score ranges between $-1.00$ and $-0.65$ (nominal resting ~ $-0.85$).
+    * **Warning Range ($1.0 < Z \le 3.5$):** Score scales between $+0.20$ and $+0.50$.
+    * **Critical Range ($Z > 3.5$ or physical trip):** Score scales between $+0.75$ and $+1.00$.
 
 ### 4.4 REST & WebSocket API Specification
 * `ws://localhost:8000/ws`: High-speed 10 Hz broadcast emitting Contract 2 JSON.
